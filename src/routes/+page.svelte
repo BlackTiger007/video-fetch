@@ -23,7 +23,9 @@
 
 				// Laufende Downloads
 				activeDownloads.set(
-					updates.filter((d) => d.status === 'downloading' || d.status === 'pending')
+					updates.filter(
+						(d) => d.status === 'downloading' || d.status === 'pending' || d.status === 'queued'
+					)
 				);
 
 				// Fertige Downloads
