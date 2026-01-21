@@ -1,4 +1,4 @@
-type DownloadStatus = 'pending' | 'downloading' | 'paused' | 'finished' | 'error';
+type DownloadStatus = 'pending' | 'downloading' | 'queued' | 'paused' | 'finished' | 'error';
 
 type DownloadItem = {
 	videoUrl: string;
