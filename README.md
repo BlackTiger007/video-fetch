@@ -19,7 +19,7 @@ A simple video download service with a SvelteKit frontend.
 
 ```yaml
 volumes:
-  - ./downloads:/downloads
+  - ./downloads:/app/downloads
 ```
 
 * **PUBLIC_MAX_CONCURRENCY**: Sets the maximum number of concurrent downloads in the frontend (slider).
