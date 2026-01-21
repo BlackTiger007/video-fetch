@@ -18,6 +18,7 @@ export const GET: RequestHandler = ({ request }) => {
 						(d) =>
 							d.status === 'downloading' ||
 							d.status === 'pending' ||
+							d.status === 'queued' ||
 							(d.finishedAt && now - d.finishedAt < 2000) // 2 Sekunden nach finish
 					)
 					.map((d) => ({
