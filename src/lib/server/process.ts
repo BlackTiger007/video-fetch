@@ -1,5 +1,5 @@
 import PQueue from 'p-queue';
-import { concurrency, downloads, paused } from '$lib/server/store.svelte';
+import { concurrency, downloads, paused } from '$lib/server/store';
 import { get } from 'svelte/store';
 import { startDownload } from './download';
 

@@ -1,5 +1,5 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import { downloads } from '$lib/server/store.svelte';
+import { downloads } from '$lib/server/store';
 import { get } from 'svelte/store';
 
 export const GET: RequestHandler = ({ request }) => {
