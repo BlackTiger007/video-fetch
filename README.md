@@ -1,42 +1,43 @@
-# sv
+# Video Fetcher
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A simple video download service with a SvelteKit frontend.
 
-## Creating a project
+## Description
 
-If you're seeing this, you've probably already done this step. Congrats!
+* Videos can be added and downloaded via URL.
+* Supports different quality options: `best`, `worst`, or audio-only.
+* Optionally, a custom filename can be set or the webpage title can be appended.
+* Ongoing and completed downloads are displayed separately.
+* **Web interface runs on port 3000 by default.**
 
-```sh
-# create a new project
-npx sv create my-app
+**Note:** Settings and ongoing downloads are **not persisted**. If the container is stopped or restarted, this data will be lost.
+
+## Configuration
+
+* **DOWNLOAD_PATH**: Path where downloaded videos are saved.
+  Should be mounted as a Docker volume to keep files persistent:
+
+```yaml
+volumes:
+  - ./downloads:/downloads
 ```
 
-To recreate this project with the same configuration:
+* **PUBLIC_MAX_CONCURRENCY**: Sets the maximum number of concurrent downloads in the frontend (slider).
+  This is **only a UI limit**, not a limit for the actual engine. Example:
 
-```sh
-# recreate this project
-pnpm dlx sv create --template minimal --types ts --add prettier eslint tailwindcss="plugins:none" sveltekit-adapter="adapter:node" devtools-json --install pnpm ./
+```env
+PUBLIC_MAX_CONCURRENCY=5
 ```
 
-## Developing
+## Usage
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+* Start the container as usual with Docker.
+* Add URLs via the web interface, choose quality, and optionally set a filename or append the page title.
+* Progress and status are displayed in the frontend.
+* Downloaded videos are located in the `DOWNLOAD_PATH`.
 
-```sh
-npm run dev
+## Notes
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+* Project is experimental and not fully tested.
+* Errors or unexpected behavior may occur.
+* Bugs or issues are welcome to be reported.
