@@ -5,10 +5,16 @@ import type { Actions, PageServerLoad } from './$types';
 import { get } from 'svelte/store';
 import { processDownloads } from '$lib/server/process';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = () => {
+	const download = get(downloads);
 	const isPaused = get(paused);
 	const parallelDownloads = get(concurrency);
-	return { downloads, isPaused, parallelDownloads };
+
+	return {
+		download,
+		isPaused,
+		parallelDownloads
+	};
 };
 
 export const actions = {
@@ -30,7 +36,7 @@ export const actions = {
 				progress: 0
 			};
 
-			downloads.push(payload);
+			downloads.update((e) => [...e, payload]);
 
 			// Ausgabe in der Konsole
 			console.log('Neuer Download hinzugefügt:', payload);

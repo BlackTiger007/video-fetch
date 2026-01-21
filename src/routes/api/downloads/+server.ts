@@ -1,5 +1,6 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { downloads } from '$lib/server/store.svelte';
+import { get } from 'svelte/store';
 
 export const GET: RequestHandler = ({ request }) => {
 	let closed = false;
@@ -12,7 +13,7 @@ export const GET: RequestHandler = ({ request }) => {
 				const now = Date.now();
 
 				// Filter: aktive Downloads + gerade fertiggestellte innerhalb der letzten 2 Sekunden
-				const activeDownloads = downloads
+				const activeDownloads = get(downloads)
 					.filter(
 						(d) =>
 							d.status === 'downloading' ||

@@ -15,7 +15,7 @@
 	onMount(() => {
 		const evtSource = new EventSource('/api/downloads');
 
-		finishedDownloads.set(data.downloads.filter((d) => d.status === 'finished'));
+		finishedDownloads.set(data.download.filter((d) => d.status === 'finished'));
 
 		evtSource.onmessage = (event) => {
 			try {

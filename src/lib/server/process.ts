@@ -28,7 +28,7 @@ function waitIfPaused() {
 }
 
 export function processDownloads() {
-	const list = downloads.filter((d) => d.status === 'pending');
+	const list = get(downloads).filter((d) => d.status === 'pending');
 
 	list.forEach((item) => {
 		queue.add(async () => {
