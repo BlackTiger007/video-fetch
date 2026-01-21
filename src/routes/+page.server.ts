@@ -38,9 +38,6 @@ export const actions = {
 
 			downloads.update((e) => [...e, payload]);
 
-			// Ausgabe in der Konsole
-			console.log('Neuer Download hinzugefügt:', payload);
-
 			processDownloads();
 
 			// Optional: Erfolgsmeldung zurück ans Frontend
@@ -57,9 +54,6 @@ export const actions = {
 
 			paused.set(pause);
 
-			// Ausgabe in der Konsole
-			console.log('Form payload:', pause);
-
 			// Optional: Erfolgsmeldung zurück ans Frontend
 			return { success: true };
 		} catch (error) {
@@ -73,9 +67,6 @@ export const actions = {
 			const newConcurrency = parseInt(formData.get('concurrency')?.toString() || '1', 10);
 
 			concurrency.set(newConcurrency);
-
-			// Ausgabe in der Konsole
-			console.log('Form payload:', newConcurrency);
 
 			// Optional: Erfolgsmeldung zurück ans Frontend
 			return { success: true };
