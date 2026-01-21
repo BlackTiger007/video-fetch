@@ -5,6 +5,18 @@ import { startDownload } from './download';
 
 const queue = new PQueue({ concurrency: get(concurrency) });
 
+concurrency.subscribe((value) => {
+	queue.concurrency = value;
+});
+
+paused.subscribe((isPaused) => {
+	if (isPaused) {
+		queue.pause();
+	} else {
+		queue.start();
+	}
+});
+
 function waitIfPaused() {
 	return new Promise<void>((resolve) => {
 		const check = () => {
