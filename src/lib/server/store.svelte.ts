@@ -7,7 +7,7 @@ import { writable } from 'svelte/store';
 export const downloads: DownloadItem[] = $state([]);
 
 /**
- * Maximale Anzahl paralleler Downloads.
+ * Anzahl paralleler Downloads.
  * Typisch: 1–10, initial auf 3 gesetzt.
  */
 export const concurrency = writable(3);
