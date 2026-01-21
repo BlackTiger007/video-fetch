@@ -1,0 +1,37 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main # Workflow auf main-Branch ausführen
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Repo auschecken
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Logge dich bei Docker Hub ein
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. Docker Image bauen
+      - name: Build Docker Image
+        run: |
+          docker build \
+            --label org.opencontainers.image.title="Video Fetcher" \
+            --label org.opencontainers.image.description="A simple video download service with a SvelteKit frontend." \
+            --label org.opencontainers.image.licenses="GNU Affero General Public License v3.0" \
+            --label org.opencontainers.image.source="https://github.com/BlackTiger007/video-fetch" \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/videofetch:latest .
+
+      # 4. Docker Image pushen
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/videofetch:latest
