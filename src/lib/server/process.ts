@@ -3,18 +3,16 @@ import { concurrency, downloads, paused } from '$lib/server/store';
 import { get } from 'svelte/store';
 import { startDownload } from './download';
 
-const queue = new PQueue({ concurrency: get(concurrency) });
+const initialConcurrency = Number(get(concurrency) ?? 1);
+const queue = new PQueue({ concurrency: initialConcurrency });
 
 concurrency.subscribe((value) => {
-	queue.concurrency = value;
+	queue.concurrency = Number(value) || 1;
 });
 
 paused.subscribe((isPaused) => {
-	if (isPaused) {
-		queue.pause();
-	} else {
-		queue.start();
-	}
+	if (isPaused) queue.pause();
+	else queue.start();
 });
 
 function waitIfPaused() {
@@ -30,11 +28,18 @@ function waitIfPaused() {
 export function processDownloads() {
 	const list = get(downloads).filter((d) => d.status === 'pending');
 
-	list.forEach((item) => {
+	for (const item of list) {
+		// Prevent double-adding
+		item.status = 'queued';
+
 		queue.add(async () => {
 			await waitIfPaused();
-			item.status = 'downloading';
-			await startDownload(item);
+			try {
+				await startDownload(item);
+			} catch (err) {
+				console.error('startDownload error', err);
+				item.status = 'error';
+			}
 		});
-	});
+	}
 }
