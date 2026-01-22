@@ -1,3 +1,4 @@
+import { defaultConcurrency, maxConcurrency } from '$lib';
 import { writable } from 'svelte/store';
 
 /**
@@ -8,9 +9,9 @@ export const downloads = writable<DownloadItem[]>([]);
 
 /**
  * Anzahl paralleler Downloads.
- * Typisch: 1–10, initial auf 3 gesetzt.
+ * Typisch: 1–3, initial auf 1 gesetzt.
  */
-export const concurrency = writable(3);
+export const concurrency = writable(Math.min(defaultConcurrency, maxConcurrency));
 
 /**
  * Flag, ob alle Downloads aktuell pausiert sind.
