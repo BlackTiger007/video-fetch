@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import { writable, get } from 'svelte/store';
 
-	let { data, form }: PageProps = $props();
+	let { data }: PageProps = $props();
 
 	// Stores für Downloads
 	const activeDownloads = writable<DownloadUpdate[]>([]);
@@ -74,98 +74,6 @@
 			</button>
 		</form>
 	</section>
-
-	<form
-		method="POST"
-		action="?/addUrl"
-		class="mb-6 flex w-full flex-col gap-4 rounded-lg bg-base-100 p-6 shadow-lg"
-		use:enhance
-	>
-		<!-- Video URL -->
-		<div class="flex flex-col">
-			<label for="video-url" class="mb-1 font-medium">Video URL</label>
-			<label class="input w-full">
-				<svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-					<g
-						stroke-linejoin="round"
-						stroke-linecap="round"
-						stroke-width="2.5"
-						fill="none"
-						stroke="currentColor"
-					>
-						<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-						<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-					</g>
-				</svg>
-				<input
-					type="url"
-					id="video-url"
-					name="video_url"
-					placeholder="https://"
-					pattern={'^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\\-]*[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}.*$'}
-					title="Must be valid URL"
-					autocomplete="off"
-					required
-				/>
-			</label>
-		</div>
-
-		<div class="flex flex-col">
-			<label for="quality" class="mb-1 font-medium">Qualität</label>
-
-			<select id="quality" name="quality" class="select-bordered select w-full">
-				<option value="best" selected>Beste Qualität</option>
-				<!-- <option value="2160p">2160p (4K)</option>
-				<option value="1440p">1440p (QHD)</option>
-				<option value="1080p">1080p (Full HD)</option>
-				<option value="720p">720p (HD)</option>
-				<option value="480p">480p</option>
-				<option value="360p">360p</option>
-				<option value="240p">240p</option> -->
-				<option value="worst">Schlechteste Qualität</option>
-				<option value="audio">Nur Audio</option>
-			</select>
-		</div>
-
-		<!-- Optionaler Dateiname -->
-		<div class="flex flex-col">
-			<label for="filename" class="mb-1 font-medium">Optionaler Dateiname</label>
-			<input
-				type="text"
-				id="filename"
-				name="filename"
-				class="input-bordered input w-full"
-				placeholder="Mein Video (Episode 1)"
-				aria-describedby="filename-help"
-				autocomplete="off"
-			/>
-			<p id="filename-help" class="mt-1 text-sm text-gray-500">
-				Erlaubt: Buchstaben, Zahlen, Leerzeichen, (), [], -, _ (max. 50)
-			</p>
-		</div>
-
-		<!-- Seitentitel anhängen -->
-		<div class="flex items-start gap-3">
-			<input
-				type="checkbox"
-				id="append-title"
-				name="append_title"
-				class="checkbox mt-1 checkbox-primary"
-			/>
-			<label for="append-title" class="cursor-pointer font-medium">
-				Seitentitel an Dateinamen anhängen
-			</label>
-		</div>
-
-		<!-- Button -->
-		<div class="flex flex-col gap-3">
-			<button type="submit" class="btn w-full btn-primary">Hinzufügen</button>
-		</div>
-
-		{#if form?.error}
-			<p class="text-error">{form.error}</p>
-		{/if}
-	</form>
 
 	<!-- Laufende Downloads -->
 	<section class="mb-4 w-full rounded-lg bg-base-100 p-4 shadow">
