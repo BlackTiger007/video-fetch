@@ -1,29 +1,43 @@
 # Video Fetcher
 
-A simple video download service with a SvelteKit frontend.
+[![Docker Pulls](https://img.shields.io/docker/pulls/blacktiger001/videofetch.svg)](https://hub.docker.com/r/blacktiger001/videofetch)
 
-## Description
+A lightweight video download service with a SvelteKit-based web interface.
 
-* Videos can be added and downloaded via URL.
-* Supports different quality options: `best`, `worst`, or audio-only.
-* Optionally, a custom filename can be set or the webpage title can be appended.
-* Ongoing and completed downloads are displayed separately.
-* **Web interface runs on port 3000 by default.**
+## Overview
 
-**Note:** Settings and ongoing downloads are **not persisted**. If the container is stopped or restarted, this data will be lost.
+Video Fetcher provides a simple web UI for downloading videos from URLs with configurable quality options.
+
+### Features
+
+- Add videos via URL and download them directly.
+- Supports multiple quality modes: `best`, `worst`, and audio-only.
+- Optional custom filenames or automatic appending of the webpage title.
+- Separate views for active and completed downloads.
+- Web interface runs on **port 3000** by default.
+
+**Important:**  
+Application state (settings and active downloads) is **not persisted**. Stopping or restarting the container will reset this data.
 
 ## Configuration
 
-* **DOWNLOAD_PATH**: Path where downloaded videos are saved.
-  Should be mounted as a Docker volume to keep files persistent:
+### `DOWNLOAD_PATH`
+
+Directory where downloaded files are stored.  
+It is strongly recommended to mount this path as a Docker volume to ensure persistence:
 
 ```yaml
 volumes:
   - ./downloads:/app/downloads
 ```
 
-* **PUBLIC_MAX_CONCURRENCY**: Sets the maximum number of concurrent downloads in the frontend (slider).
-  This is **only a UI limit**, not a limit for the actual engine. Example:
+### `PUBLIC_MAX_CONCURRENCY`
+
+Defines the maximum number of concurrent downloads selectable in the frontend UI (slider).
+This affects **only the UI**, not the underlying download engine.
+
+- Default: `3`
+- Example:
 
 ```env
 PUBLIC_MAX_CONCURRENCY=5
@@ -31,13 +45,39 @@ PUBLIC_MAX_CONCURRENCY=5
 
 ## Usage
 
-* Start the container as usual with Docker.
-* Add URLs via the web interface, choose quality, and optionally set a filename or append the page title.
-* Progress and status are displayed in the frontend.
-* Downloaded videos are located in the `DOWNLOAD_PATH`.
+1. Start the container using Docker or Docker Compose.
+2. Open the web interface.
+3. Add one or more video URLs.
+4. Select the desired quality and optional filename settings.
+5. Monitor progress and status directly in the UI.
+
+Downloaded files will be available in the configured `DOWNLOAD_PATH`.
+
+## Running with Docker
+
+```cmd
+docker run -d \
+  -p 3000:3000 \
+  -v /path/downloads:/app/downloads \
+  blacktiger001/videofetch
+```
+
+## Running with Docker Compose
+
+```yaml
+services:
+  videofetch:
+    image: blacktiger001/videofetch
+    container_name: videofetch
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /path/downloads:/app/downloads
+```
 
 ## Notes
 
-* Project is experimental and not fully tested.
-* Errors or unexpected behavior may occur.
-* Bugs or issues are welcome to be reported.
+- This project is experimental and not yet fully tested.
+- Unexpected behavior or errors may occur.
+- Bug reports and issue submissions are welcome.
