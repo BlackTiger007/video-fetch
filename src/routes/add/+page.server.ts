@@ -35,11 +35,11 @@ export const actions: Actions = {
 			downloads.update((e) => [...e, payload]);
 
 			processDownloads();
-
-			redirect(302, '/');
 		} catch (error) {
 			return fail(400, { error: (error as Error).message });
 		}
+
+		redirect(302, '/');
 	},
 
 	importBatch: async ({ request }) => {
@@ -99,10 +99,9 @@ export const actions: Actions = {
 
 			downloads.update((e) => [...e, ...items]);
 			processDownloads();
-
-			redirect(302, '/');
 		} catch (error) {
 			return fail(400, { error: (error as Error).message });
 		}
+		redirect(302, '/');
 	}
 };
