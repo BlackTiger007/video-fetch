@@ -157,9 +157,8 @@
 			</label>
 		</div>
 
-		<!-- Buttons -->
+		<!-- Button -->
 		<div class="flex flex-col gap-3">
-			<button type="reset" class="btn w-full btn-outline">Zurücksetzen</button>
 			<button type="submit" class="btn w-full btn-primary">Hinzufügen</button>
 		</div>
 
