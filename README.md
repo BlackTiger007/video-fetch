@@ -31,6 +31,17 @@ volumes:
   - ./downloads:/app/downloads
 ```
 
+### `PUBLIC_DEFAULT_CONCURRENCY`
+
+Defines the default number of concurrent downloads.
+
+- Default: `1`
+- Example:
+
+```env
+PUBLIC_DEFAULT_CONCURRENCY=2
+```
+
 ### `PUBLIC_MAX_CONCURRENCY`
 
 Defines the maximum number of concurrent downloads selectable in the frontend UI (slider).
