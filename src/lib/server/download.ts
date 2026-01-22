@@ -6,20 +6,17 @@ import { mapQualityToFormat } from './ks';
 export async function startDownload(item: DownloadItem) {
 	const ytDlpPath = path.resolve('./bin/yt-dlp.exe');
 
-	// Wenn kein Dateiname angegeben, verwende Titel
+	// Standard-Dateiname
 	let filename = item.filename;
 	if (!filename || filename.trim() === '') {
 		filename = '%(title)s';
 	}
 
-	// Falls appendTitle aktiv ist, hänge Titel an (wenn filename != title, z.B. vom User gesetzt)
 	if (item.appendTitle && filename !== '%(title)s') {
 		filename += ' - %(title)s';
 	}
 
 	const output = path.join(DOWNLOAD_FOLDER, `${filename}.%(ext)s`);
-
-	// Qualität: Format + Sortierung
 	const qualityArgs = mapQualityToFormat(item.quality);
 
 	item.status = 'downloading';
@@ -28,17 +25,19 @@ export async function startDownload(item: DownloadItem) {
 	return new Promise<void>((resolve, reject) => {
 		const args: string[] = [item.videoUrl];
 
-		// Format setzen
 		if (qualityArgs.format) args.push('-f', qualityArgs.format);
 		if (qualityArgs.sort) args.push('-S', qualityArgs.sort);
 
 		args.push('-o', output, '--newline', '--no-playlist');
 
-		const proc = spawn(import.meta.env.DEV ? ytDlpPath : 'yt-dlp', args);
+		const proc = spawn(import.meta.env.DEV ? ytDlpPath : 'yt-dlp', args, {
+			stdio: ['ignore', 'pipe', 'pipe'], // stdin ignorieren, stdout/stderr als Stream
+			windowsHide: true
+		});
 
+		// stdout nur relevante Zeilen
 		proc.stdout.on('data', (data) => {
 			const lines = data.toString().split('\n');
-
 			for (const line of lines) {
 				const progressMatch = line.match(/(\d+(?:\.\d+)?)%.*?ETA\s+(\S+)/);
 				const speedMatch = line.match(/([\d.]+[KMG]?i?B\/s)/);
@@ -54,19 +53,21 @@ export async function startDownload(item: DownloadItem) {
 			}
 		});
 
+		// stderr nur loggen
 		proc.stderr.on('data', (data) => {
 			console.error('[yt-dlp]', data.toString());
 		});
 
+		// Prozess beendet
 		proc.on('close', (code) => {
+			// Status setzen
 			if (code === 0) {
 				item.status = 'finished';
 				item.finishedAt = Date.now();
 				item.progress = 100;
 
-				// Stelle sicher, dass filename nie null ist
 				if (!item.filename || item.filename.trim() === '') {
-					item.filename = filename.replace(/%\(.+?\)s/g, '').trim(); // Entfernt Platzhalter
+					item.filename = filename.replace(/%\(.+?\)s/g, '').trim();
 				}
 
 				resolve();
@@ -74,6 +75,11 @@ export async function startDownload(item: DownloadItem) {
 				item.status = 'error';
 				reject(new Error(`Download failed with code ${code}`));
 			}
+
+			// **Aufräumen nach Prozessende**
+			proc.stdout.destroy();
+			proc.stderr.destroy();
+			proc.removeAllListeners();
 		});
 	});
 }
