@@ -1,6 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { downloads } from '$lib/server/store';
 import { get } from 'svelte/store';
+import type { DownloadUpdate } from '$lib/types/download';
 
 export const GET: RequestHandler = ({ request }) => {
 	let closed = false;
@@ -19,14 +20,16 @@ export const GET: RequestHandler = ({ request }) => {
 							d.status === 'downloading' ||
 							d.status === 'pending' ||
 							d.status === 'queued' ||
-							(d.finishedAt && now - d.finishedAt < 2000) // 2 Sekunden nach finish
+							(d.finishedAt && now - d.finishedAt.getMilliseconds() < 2000) // 2 Sekunden nach finish
 					)
 					.map((d) => ({
-						filename: d.filename,
+						id: d.id,
+						fileName: d.fileName,
 						status: d.status,
 						progress: d.progress,
 						speed: d.speed,
-						eta: d.eta
+						eta: d.eta,
+						fragment: d.fragment
 					}));
 
 				if (activeDownloads.length === 0) return; // nichts senden, kein Download aktiv
