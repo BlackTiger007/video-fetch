@@ -101,7 +101,7 @@
 						placeholder="Meine Datei (Episode 1)"
 					/>
 					<span class="text-sm text-gray-500">
-						Erlaubt: Buchstaben, Zahlen, Leerzeichen, (), [], -, _ (max. 50)
+						Erlaubt: Buchstaben, Zahlen, Leerzeichen, (), [], -, _ (max. 250)
 					</span>
 				</label>
 
