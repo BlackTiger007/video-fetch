@@ -1,20 +1,19 @@
 import PQueue from 'p-queue';
-import { concurrency, downloads, paused } from '$lib/server/store';
+import { downloads, paused } from '$lib/server/store';
 import { get } from 'svelte/store';
 import { startDownload } from './download';
 import { setStatus } from './db';
 
-const initialConcurrency = Number(get(concurrency) ?? 1);
-const queue = new PQueue({ concurrency: initialConcurrency });
+const queue = new PQueue({ concurrency: 1 });
 
-concurrency.subscribe((value) => {
+export function setConcurrency(value: number) {
 	queue.concurrency = Number(value) || 1;
-});
+}
 
-paused.subscribe((isPaused) => {
+export function setPause(isPaused: boolean) {
 	if (isPaused) queue.pause();
 	else queue.start();
-});
+}
 
 function waitIfPaused() {
 	return new Promise<void>((resolve) => {
