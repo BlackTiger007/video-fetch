@@ -83,7 +83,7 @@ export const actions: Actions = {
 					return fail(400, { error: `Ungültige URL in Zeile ${index + 1}: ${videoUrl}` });
 				}
 
-				if (filename && filename.length > 50) {
+				if (filename && filename.length > 250) {
 					return fail(400, { error: `Dateiname zu lang in Zeile ${index + 1}` });
 				}
 
@@ -102,6 +102,7 @@ export const actions: Actions = {
 		} catch (error) {
 			return fail(400, { error: (error as Error).message });
 		}
+
 		redirect(302, '/');
 	}
 };
