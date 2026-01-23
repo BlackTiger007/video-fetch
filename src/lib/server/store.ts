@@ -3,7 +3,7 @@ import { writable } from 'svelte/store';
 import { db } from './db/index';
 import { downloads as downloadsSchema } from './db/schema';
 import type { DownloadItem } from '$lib/types/download';
-import { processDownloads } from './process';
+import { processDownloads, setConcurrency, setPause } from './process';
 
 /**
  * Liste aller Downloads, die aktuell in der Queue oder in Bearbeitung sind.
@@ -23,8 +23,16 @@ export const downloads = writable<DownloadItem[]>([]);
  */
 export const concurrency = writable(Math.min(defaultConcurrency, maxConcurrency));
 
+concurrency.subscribe((value) => {
+	setConcurrency(value);
+});
+
 /**
  * Flag, ob alle Downloads aktuell pausiert sind.
  * true → Downloads werden nicht gestartet, false → Downloads laufen wie erlaubt.
  */
 export const paused = writable(false);
+
+paused.subscribe((isPaused) => {
+	setPause(isPaused);
+});
