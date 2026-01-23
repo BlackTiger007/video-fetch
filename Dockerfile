@@ -39,4 +39,4 @@ COPY --from=builder /app/package.json ./package.json
 EXPOSE 3000
 
 # Start
-CMD ["node", "build"]
+CMD ["node build"]
