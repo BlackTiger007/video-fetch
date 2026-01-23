@@ -1,3 +1,5 @@
+import type { DownloadQuality, YtDlpFormat } from '$lib/types/download';
+
 export function mapQualityToFormat(quality: DownloadQuality): YtDlpFormat {
 	switch (quality) {
 		case 'best':
