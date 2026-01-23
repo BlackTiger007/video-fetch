@@ -13,7 +13,7 @@ export const GET: RequestHandler = ({ request }) => {
 				const now = Date.now();
 
 				// Filter: aktive Downloads + gerade fertiggestellte innerhalb der letzten 2 Sekunden
-				const activeDownloads = get(downloads)
+				const activeDownloads: DownloadUpdate[] = get(downloads)
 					.filter(
 						(d) =>
 							d.status === 'downloading' ||
