@@ -120,10 +120,10 @@
 			method="POST"
 			action="?/importBatch"
 			enctype="multipart/form-data"
-			class="mb-6 rounded-lg bg-base-100 p-6 shadow-lg"
+			class="mb-6 w-full min-w-fit rounded-lg bg-base-100 p-6 shadow-lg"
 			use:enhance
 		>
-			<div class="grid gap-4">
+			<div class="grid w-full gap-4">
 				<div>
 					<label for="import_file" class="font-medium">Import-Datei (.txt, Tab-getrennt)</label>
 					<input
