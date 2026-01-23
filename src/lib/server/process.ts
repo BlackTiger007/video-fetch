@@ -2,6 +2,7 @@ import PQueue from 'p-queue';
 import { concurrency, downloads, paused } from '$lib/server/store';
 import { get } from 'svelte/store';
 import { startDownload } from './download';
+import { setStatus } from './db';
 
 const initialConcurrency = Number(get(concurrency) ?? 1);
 const queue = new PQueue({ concurrency: initialConcurrency });
@@ -25,12 +26,12 @@ function waitIfPaused() {
 	});
 }
 
-export function processDownloads() {
+export async function processDownloads() {
 	const list = get(downloads).filter((d) => d.status === 'pending');
 
 	for (const item of list) {
 		// Prevent double-adding
-		item.status = 'queued';
+		await setStatus(item.id, 'queued');
 
 		queue.add(async () => {
 			await waitIfPaused();
