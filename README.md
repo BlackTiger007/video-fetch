@@ -2,7 +2,7 @@
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/blacktiger001/videofetch.svg)](https://hub.docker.com/r/blacktiger001/videofetch)
 
-A lightweight video download service with a SvelteKit-based web interface.
+A simple web-based video download service powered by yt-dlp, featuring a SvelteKit frontend.
 
 ## Overview
 
