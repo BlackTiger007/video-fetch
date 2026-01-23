@@ -15,7 +15,9 @@
 	onMount(() => {
 		const evtSource = new EventSource('/api/downloads');
 
-		finishedDownloads.set(data.download.filter((d) => d.status === 'finished'));
+		finishedDownloads.set(
+			data.download.filter((d) => d.status === 'finished' || d.status === 'error')
+		);
 
 		evtSource.onmessage = (event) => {
 			try {
@@ -29,7 +31,7 @@
 				);
 
 				// Fertige Downloads
-				const finished = updates.filter((d) => d.status === 'finished');
+				const finished = updates.filter((d) => d.status === 'finished' || d.status === 'error');
 
 				const currentFinished = get(finishedDownloads);
 
@@ -82,7 +84,7 @@
 			{#each $activeDownloads as d}
 				<div class="mb-2">
 					<div class="flex justify-between">
-						<span class="font-medium">{d.filename}</span>
+						<span class="truncate font-medium">{d.filename}</span>
 						<span class="text-sm text-gray-500">{d.status}</span>
 					</div>
 					<div class="mt-1 h-2 w-full overflow-hidden rounded bg-gray-200">
@@ -116,7 +118,7 @@
 		{#if $finishedDownloads.length > 0}
 			{#each $finishedDownloads as d}
 				<div class="flex justify-between">
-					<span>{d.filename}</span>
+					<span class="truncate">{d.filename}</span>
 					<span class="text-sm text-gray-500">{d.status}</span>
 				</div>
 			{/each}
