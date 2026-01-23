@@ -1,7 +1,10 @@
-import { downloads } from '$lib/server/store';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { processDownloads } from '$lib/server/process';
+import { addDownload, addDownloads } from '$lib/server/db';
+import { sanitizeFilename } from '$lib/server/utils';
+import type { DownloadAdd } from '$lib/server/db/schema';
+import type { DownloadQuality } from '$lib/types/download';
 
 const urlPattern = /^(https?:\/\/).+$/i;
 
@@ -11,7 +14,7 @@ export const actions: Actions = {
 			const formData = await request.formData();
 
 			const videoUrl = formData.get('video_url')?.toString() || '';
-			const filename = formData.get('filename')?.toString() || null;
+			let fileName = formData.get('filename')?.toString() || null;
 			const appendTitle = formData.get('append_title') === 'on';
 			const quality = (formData.get('quality')?.toString() as DownloadQuality) ?? 'best';
 
@@ -19,22 +22,20 @@ export const actions: Actions = {
 				return fail(400, { error: 'Ungültige URL' });
 			}
 
-			if (filename && filename.length > 50) {
+			if (fileName) fileName = sanitizeFilename(fileName);
+			if (fileName && fileName.length > 250) {
 				return fail(400, { error: 'Dateiname zu lang (max. 50 Zeichen)' });
 			}
 
-			const payload: DownloadItem = {
+			await addDownload({
 				videoUrl,
-				filename,
+				fileName,
 				appendTitle,
 				quality,
-				status: 'pending',
-				progress: 0
-			};
+				status: 'pending'
+			});
 
-			downloads.update((e) => [...e, payload]);
-
-			processDownloads();
+			void processDownloads();
 		} catch (error) {
 			return fail(400, { error: (error as Error).message });
 		}
@@ -68,12 +69,12 @@ export const actions: Actions = {
 				.filter(Boolean);
 			if (lines.length === 0) return fail(400, { error: 'Keine gültigen Zeilen gefunden' });
 
-			const items: DownloadItem[] = [];
+			const items: DownloadAdd[] = [];
 
 			for (const [index, line] of lines.entries()) {
 				const cols = line.split('\t');
 				const videoUrl = (cols[0] || '').trim();
-				const filename = (cols[1] || '').trim() || null;
+				let fileName = (cols[1] || '').trim() || null;
 
 				if (!videoUrl) {
 					return fail(400, { error: `Leere URL in Zeile ${index + 1}` });
@@ -83,22 +84,22 @@ export const actions: Actions = {
 					return fail(400, { error: `Ungültige URL in Zeile ${index + 1}: ${videoUrl}` });
 				}
 
-				if (filename && filename.length > 250) {
+				if (fileName) fileName = sanitizeFilename(fileName);
+				if (fileName && fileName.length > 250) {
 					return fail(400, { error: `Dateiname zu lang in Zeile ${index + 1}` });
 				}
 
 				items.push({
 					videoUrl,
-					filename,
+					fileName: fileName,
 					appendTitle: false,
 					quality: 'best',
-					status: 'pending',
-					progress: 0
+					status: 'pending'
 				});
 			}
 
-			downloads.update((e) => [...e, ...items]);
-			processDownloads();
+			await addDownloads(items);
+			void processDownloads();
 		} catch (error) {
 			return fail(400, { error: (error as Error).message });
 		}
