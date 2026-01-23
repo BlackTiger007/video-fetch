@@ -31,6 +31,16 @@ volumes:
   - ./downloads:/app/downloads
 ```
 
+### `DATABASE_PATH`
+
+Path where the database file is stored.
+It is strongly recommended to mount this path as a Docker volume to ensure data persistence:
+
+```yaml
+volumes:
+  - ./data/downloads.db:/data/downloads.db
+```
+
 ### `PUBLIC_DEFAULT_CONCURRENCY`
 
 Defines the default number of concurrent downloads.
