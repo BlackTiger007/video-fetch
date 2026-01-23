@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { maxConcurrency } from '$lib';
+	import type { DownloadUpdate } from '$lib/types/download';
 	import type { PageProps } from './$types';
 	import { onMount } from 'svelte';
 	import { writable, get } from 'svelte/store';
@@ -15,6 +16,7 @@
 	onMount(() => {
 		const evtSource = new EventSource('/api/downloads');
 
+		// bereits fertige Downloads initial setzen
 		finishedDownloads.set(
 			data.download.filter((d) => d.status === 'finished' || d.status === 'error')
 		);
@@ -23,21 +25,19 @@
 			try {
 				const updates: DownloadUpdate[] = JSON.parse(event.data);
 
-				// Laufende Downloads
+				// laufende Downloads filtern
 				activeDownloads.set(
 					updates.filter(
 						(d) => d.status === 'downloading' || d.status === 'pending' || d.status === 'queued'
 					)
 				);
 
-				// Fertige Downloads
+				// fertiggestellte Downloads
 				const finished = updates.filter((d) => d.status === 'finished' || d.status === 'error');
-
 				const currentFinished = get(finishedDownloads);
 
 				for (const d of finished) {
-					// Nur hinzufügen, wenn noch nicht vorhanden
-					if (!currentFinished.find((fd) => fd.filename === d.filename)) {
+					if (!currentFinished.find((fd) => fd.id === d.id)) {
 						finishedDownloads.update((f) => [...f, d]);
 					}
 				}
@@ -48,6 +48,19 @@
 
 		return () => evtSource.close();
 	});
+
+	// Hilfsfunktion für Info-Text unter Fortschrittsbalken
+	function formatDownloadInfo(d: DownloadUpdate) {
+		const parts: string[] = [];
+
+		parts.push(`${d.progress.toFixed(1)}%`);
+		if (d.size) parts.push(`Größe: ${d.size}`);
+		if (d.speed) parts.push(`Speed: ${d.speed}`);
+		if (d.eta) parts.push(`ETA: ${d.eta}`);
+		if (d.fragment) parts.push(`Frag: ${d.fragment.current}/${d.fragment.total}`);
+
+		return parts.join(' | ');
+	}
 </script>
 
 <div class="w-full max-w-3xl px-4">
@@ -81,11 +94,11 @@
 	<section class="mb-4 w-full rounded-lg bg-base-100 p-4 shadow">
 		<h2 class="mb-3 text-lg font-semibold">Laufende Downloads</h2>
 		{#if $activeDownloads.length > 0}
-			{#each $activeDownloads as d}
-				<div class="mb-2">
+			{#each $activeDownloads as d (d.id)}
+				<div class="mb-3">
 					<div class="flex justify-between">
-						<span class="truncate font-medium">{d.filename}</span>
-						<span class="text-sm text-gray-500">{d.status}</span>
+						<span class="truncate font-medium">{d.fileName ?? 'Unbenannt'}</span>
+						<span class="text-sm text-gray-500 capitalize">{d.status}</span>
 					</div>
 					<div class="mt-1 h-2 w-full overflow-hidden rounded bg-gray-200">
 						<div
@@ -94,16 +107,7 @@
 						></div>
 					</div>
 					<div class="mt-1 text-sm text-gray-500">
-						{d.progress.toFixed(1)}%
-						{#if d.size}
-							| {d.size}
-						{/if}
-						{#if d.speed}
-							| {d.speed}
-						{/if}
-						{#if d.eta}
-							| ETA: {d.eta}
-						{/if}
+						{formatDownloadInfo(d)}
 					</div>
 				</div>
 			{/each}
@@ -116,10 +120,12 @@
 	<section class="w-full rounded-lg bg-base-100 p-4 shadow">
 		<h2 class="mb-3 text-lg font-semibold">Heruntergeladen</h2>
 		{#if $finishedDownloads.length > 0}
-			{#each $finishedDownloads as d}
-				<div class="flex justify-between">
-					<span class="truncate">{d.filename}</span>
-					<span class="text-sm text-gray-500">{d.status}</span>
+			{#each $finishedDownloads as d (d.id)}
+				<div class="mb-1 flex justify-between">
+					<span class="truncate">{d.fileName ?? 'Unbenannt'}</span>
+					<span class="text-sm text-gray-500" class:text-error={d.status === 'error'}>
+						{d.status === 'finished' ? 'Fertig' : 'Fehler'}
+					</span>
 				</div>
 			{/each}
 		{:else}
