@@ -16,7 +16,7 @@ type DownloadItem = {
 
 interface DownloadUpdate {
 	filename: string | null;
-	status: string;
+	status: DownloadStatus;
 	progress: number; // 0-100
 	speed?: string;
 	eta?: string;
