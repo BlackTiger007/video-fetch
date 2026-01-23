@@ -2,12 +2,15 @@ import { spawn } from 'child_process';
 import path from 'path';
 import { DOWNLOAD_FOLDER } from './config';
 import { mapQualityToFormat } from './ks';
+import { setStatus } from './db';
+import type { DownloadItem } from '$lib/types/download';
+import { downloads } from './store';
 
 export async function startDownload(item: DownloadItem) {
 	const ytDlpPath = path.resolve('./bin/yt-dlp.exe');
 
 	// Standard-Dateiname
-	let filename = item.filename;
+	let filename = item.fileName;
 	if (!filename || filename.trim() === '') {
 		filename = '%(title)s';
 	}
@@ -15,11 +18,10 @@ export async function startDownload(item: DownloadItem) {
 	if (item.appendTitle && filename !== '%(title)s') {
 		filename += ' - %(title)s';
 	}
-
 	const output = path.join(DOWNLOAD_FOLDER, `${filename}.%(ext)s`);
 	const qualityArgs = mapQualityToFormat(item.quality);
 
-	item.status = 'downloading';
+	await setStatus(item.id, 'downloading');
 	item.progress = 0;
 
 	return new Promise<void>((resolve, reject) => {
@@ -38,17 +40,31 @@ export async function startDownload(item: DownloadItem) {
 		// stdout nur relevante Zeilen
 		proc.stdout.on('data', (data) => {
 			const lines = data.toString().split('\n');
+
 			for (const line of lines) {
-				const progressMatch = line.match(/(\d+(?:\.\d+)?)%.*?ETA\s+(\S+)/);
-				const speedMatch = line.match(/([\d.]+[KMG]?i?B\/s)/);
+				const regex =
+					/(\d+(?:\.\d+)?)%.*?at\s+([\d.]+[KMG]?i?B\/s).*?ETA\s+(\S+)(?:.*?\(frag\s+(\d+)\/(\d+)\))?/;
+				const match = line.match(regex);
 
-				if (progressMatch) {
-					item.progress = parseFloat(progressMatch[1]);
-					item.eta = progressMatch[2];
-				}
+				if (match) {
+					const [, progressStr, speedStr, etaStr, fragNumStr, fragTotalStr] = match;
 
-				if (speedMatch) {
-					item.speed = speedMatch[1];
+					downloads.update((items) =>
+						items.map((d) =>
+							d.id === item.id
+								? {
+										...d,
+										progress: parseFloat(progressStr),
+										speed: speedStr,
+										eta: etaStr,
+										fragment:
+											fragNumStr && fragTotalStr
+												? { current: +fragNumStr, total: +fragTotalStr }
+												: undefined
+									}
+								: d
+						)
+					);
 				}
 			}
 		});
@@ -59,20 +75,14 @@ export async function startDownload(item: DownloadItem) {
 		});
 
 		// Prozess beendet
-		proc.on('close', (code) => {
+		proc.on('close', async (code) => {
 			// Status setzen
 			if (code === 0) {
-				item.status = 'finished';
-				item.finishedAt = Date.now();
-				item.progress = 100;
-
-				if (!item.filename || item.filename.trim() === '') {
-					item.filename = filename.replace(/%\(.+?\)s/g, '').trim();
-				}
+				await setStatus(item.id, 'finished');
 
 				resolve();
 			} else {
-				item.status = 'error';
+				await setStatus(item.id, 'error');
 				reject(new Error(`Download failed with code ${code}`));
 			}
 
