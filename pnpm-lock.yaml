@@ -11,6 +11,12 @@ importers:
       better-sqlite3:
         specifier: ^12.5.0
         version: 12.6.2
+      drizzle-kit:
+        specifier: ^0.31.8
+        version: 0.31.8
+      drizzle-orm:
+        specifier: ^0.45.0
+        version: 0.45.1(@types/better-sqlite3@7.6.13)(better-sqlite3@12.6.2)
       p-queue:
         specifier: ^9.1.0
         version: 9.1.0
@@ -42,12 +48,6 @@ importers:
       daisyui:
         specifier: ^5.5.14
         version: 5.5.14
-      drizzle-kit:
-        specifier: ^0.31.8
-        version: 0.31.8
-      drizzle-orm:
-        specifier: ^0.45.0
-        version: 0.45.1(@types/better-sqlite3@7.6.13)(better-sqlite3@12.6.2)
       eslint:
         specifier: ^9.39.1
         version: 9.39.2(jiti@2.6.1)
