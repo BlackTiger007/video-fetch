@@ -1,5 +1,5 @@
 # --- Build Stage ---
-FROM node:20-slim AS builder
+FROM node:20.19.5-slim AS builder
 WORKDIR /app
 
 # Systemtools + pnpm
@@ -21,7 +21,7 @@ RUN pnpm run build
 RUN pnpm prune --production
 
 # --- Production Stage ---
-FROM node:20-slim
+FROM node:20.19.5-slim
 WORKDIR /app
 
 # Runtime-Tools + yt-dlp
