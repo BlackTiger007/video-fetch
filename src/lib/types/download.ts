@@ -18,6 +18,7 @@ export interface DownloadUpdate {
 	id: string;
 	fileName: string | null;
 	status: DownloadStatus;
+	errorMessage: string | null;
 	progress: number; // 0-100
 	speed?: string;
 	eta?: string;
