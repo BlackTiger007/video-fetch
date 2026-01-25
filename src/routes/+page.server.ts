@@ -82,7 +82,11 @@ export const actions = {
 			return fail(400, { error: 'Ungültige ID' });
 		}
 
-		await removeFromQueue(id);
+		try {
+			await removeFromQueue(id);
+		} catch (err) {
+			console.warn('Cancel ignored:', err);
+		}
 
 		return { success: true };
 	},
