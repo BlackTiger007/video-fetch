@@ -21,6 +21,8 @@ export const load: PageServerLoad = () => {
 
 export const actions = {
 	setPause: async ({ request }) => {
+		console.log('Backend: setPause');
+
 		try {
 			const formData = await request.formData();
 
@@ -31,10 +33,13 @@ export const actions = {
 			// Optional: Erfolgsmeldung zurück ans Frontend
 			return { success: true };
 		} catch (error) {
+			console.log('error: ', (error as Error).message);
 			return fail(400, { error: (error as Error).message });
 		}
 	},
 	setConcurrency: async ({ request }) => {
+		console.log('Backend: setConcurrency');
+
 		try {
 			const formData = await request.formData();
 
@@ -45,15 +50,19 @@ export const actions = {
 			// Optional: Erfolgsmeldung zurück ans Frontend
 			return { success: true };
 		} catch (error) {
+			console.log('error: ', (error as Error).message);
 			return fail(400, { error: (error as Error).message });
 		}
 	},
 	deleteDownload: async ({ request }) => {
+		console.log('Backend: deleteDownload');
+
 		const formData = await request.formData();
 
 		const id = formData.get('id')?.toString() || null;
 
-		if (id?.length !== 37) {
+		if (id?.length !== 36) {
+			console.log("error: 'Ungültige ID'");
 			return fail(400, { error: 'Ungültige ID' });
 		}
 
@@ -62,11 +71,14 @@ export const actions = {
 		return { success: true };
 	},
 	cancelDownload: async ({ request }) => {
+		console.log('Backend: cancelDownload');
+
 		const formData = await request.formData();
 
 		const id = formData.get('id')?.toString() || null;
 
-		if (id?.length !== 37) {
+		if (id?.length !== 36) {
+			console.log("error: 'Ungültige ID'");
 			return fail(400, { error: 'Ungültige ID' });
 		}
 
@@ -75,11 +87,14 @@ export const actions = {
 		return { success: true };
 	},
 	retryDownload: async ({ request }) => {
+		console.log('Backend: retryDownload');
+
 		const formData = await request.formData();
 
 		const id = formData.get('id')?.toString() || null;
 
-		if (id?.length !== 37) {
+		if (id?.length !== 36) {
+			console.log("error: 'Ungültige ID'", id?.length);
 			return fail(400, { error: 'Ungültige ID' });
 		}
 
