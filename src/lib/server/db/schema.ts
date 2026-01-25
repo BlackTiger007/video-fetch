@@ -12,6 +12,7 @@ export const downloads = sqliteTable(
 		appendTitle: integer('append_title', { mode: 'boolean' }).notNull(),
 		quality: text('quality').notNull().$type<DownloadQuality>(),
 		status: text('status').notNull().$type<DownloadStatus>(),
+		errorMessage: text('error_message'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.$defaultFn(() => new Date()),
