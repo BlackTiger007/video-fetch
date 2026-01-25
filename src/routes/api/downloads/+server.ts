@@ -24,6 +24,7 @@ export const GET: RequestHandler = ({ request }) => {
 					)
 					.map((d) => ({
 						id: d.id,
+						videoUrl: d.videoUrl,
 						fileName: d.fileName,
 						status: d.status,
 						errorMessage: d.errorMessage,
