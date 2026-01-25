@@ -30,13 +30,32 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 			windowsHide: true
 		});
 
-		// Abort / Cancel
-		const abortHandler = () => {
-			if (!proc.killed) proc.kill('SIGTERM');
+		// Abort
+		const abortHandler = async () => {
+			try {
+				if (!proc.killed) {
+					if (process.platform === 'win32') {
+						// Windows: Nutze taskkill, um yt-dlp.exe + evtl. Kindprozesse zu beenden
+						const { exec } = await import('child_process');
+						exec(`taskkill /PID ${proc.pid} /T /F`);
+					} else {
+						// Linux/macOS
+						proc.kill('SIGKILL');
+					}
+				}
+			} catch (err) {
+				console.warn('Failed to kill child process on abort:', err);
+			}
 		};
+
 		if (signal) {
 			if (signal.aborted) {
-				abortHandler();
+				// falls Signal bereits abgebrochen ist -> sofort beenden
+				try {
+					abortHandler();
+				} catch {
+					// ignorieren
+				}
 				downloads.update((items) =>
 					items.map((d) =>
 						d.id === item.id ? { ...d, status: 'error', errorMessage: 'aborted' } : d
@@ -44,51 +63,37 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 				);
 				return resolve();
 			}
-			signal.addEventListener('abort', abortHandler, { once: true });
-		}
-
-		// stdout Progress
-		proc.stdout.on('data', (data) => {
-			const lines = data.toString().split('\n');
-			for (const line of lines) {
-				const regex =
-					/(\d+(?:\.\d+)?)%.*?at\s+([\d.]+[KMG]?i?B\/s).*?ETA\s+(\S+)(?:.*?\(frag\s+(\d+)\/(\d+)\))?/;
-				const match = line.match(regex);
-				if (!match) continue;
-				const [, progressStr, speedStr, etaStr, fragCur, fragTotal] = match;
-
-				downloads.update((items) =>
-					items.map((d) =>
-						d.id === item.id
-							? {
-									...d,
-									progress: parseFloat(progressStr),
-									speed: speedStr,
-									eta: etaStr,
-									fragment:
-										fragCur && fragTotal ? { current: +fragCur, total: +fragTotal } : undefined
-								}
-							: d
-					)
+			// hinzufügt Listener (einmalig)
+			try {
+				signal?.addEventListener(
+					'abort',
+					() => {
+						setImmediate(() => abortHandler());
+					},
+					{ once: true }
 				);
+			} catch (err) {
+				console.warn('Failed to add abort listener:', err);
 			}
-		});
-
-		// stderr Errors
-		proc.stderr.on('data', (data) => {
-			const msg: string = data.toString();
-			downloads.update((items) =>
-				items.map((d) => (d.id === item.id ? { ...d, errorMessage: msg.slice(0, 1000) } : d))
-			);
-			console.error('[yt-dlp]', msg);
-		});
+		}
 
 		// Prozess Ende
 		proc.on('close', async (code) => {
-			signal?.removeEventListener('abort', abortHandler);
+			// safe remove listener
+			try {
+				signal?.removeEventListener('abort', abortHandler);
+			} catch {
+				// ignorieren
+			}
 
+			// ... Rest bleibt gleich
 			if (signal?.aborted) {
 				await setStatus(item.id, 'error');
+				downloads.update((items) =>
+					items.map((d) =>
+						d.id === item.id ? { ...d, errorMessage: 'Vom Benutzer abgebrochen' } : d
+					)
+				);
 				return resolve();
 			}
 
@@ -110,13 +115,8 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 						)
 					);
 				}
-
 				await setStatus(item.id, 'finished');
-			} else {
-				await setStatus(item.id, 'error');
-				console.error(`Download failed for ${item.videoUrl} with code ${code}`);
 			}
-
 			resolve();
 		});
 	});
