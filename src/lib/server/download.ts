@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, exec as execChild } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { DOWNLOAD_FOLDER } from './config';
@@ -30,16 +30,59 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 			windowsHide: true
 		});
 
-		// Abort
-		const abortHandler = async () => {
+		const stderrBuffer: string[] = [];
+
+		// stdout: Fortschritt parsen (gleich wie vorher)
+		proc.stdout.on('data', (data) => {
+			const lines = data.toString().split('\n');
+			for (const line of lines) {
+				const regex =
+					/(\d+(?:\.\d+)?)%.*?at\s+([\d.]+[KMG]?i?B\/s).*?ETA\s+(\S+)(?:.*?\(frag\s+(\d+)\/(\d+)\))?/;
+				const match = line.match(regex);
+				if (!match) continue;
+				const [, progressStr, speedStr, etaStr, fragCur, fragTotal] = match;
+
+				downloads.update((items) =>
+					items.map((d) =>
+						d.id === item.id
+							? {
+									...d,
+									progress: parseFloat(progressStr),
+									speed: speedStr,
+									eta: etaStr,
+									fragment:
+										fragCur && fragTotal ? { current: +fragCur, total: +fragTotal } : undefined
+								}
+							: d
+					)
+				);
+			}
+		});
+
+		// stderr sammeln
+		proc.stderr.on('data', (data) => {
+			const msg = data.toString().trim();
+			if (msg) {
+				stderrBuffer.push(msg);
+				console.error('[yt-dlp]', msg);
+			}
+		});
+
+		// robustes Beenden des Child-Prozesses
+		const killProcess = () => {
 			try {
 				if (!proc.killed) {
 					if (process.platform === 'win32') {
-						// Windows: Nutze taskkill, um yt-dlp.exe + evtl. Kindprozesse zu beenden
-						const { exec } = await import('child_process');
-						exec(`taskkill /PID ${proc.pid} /T /F`);
+						// Windows: taskkill + Kindprozesse
+						try {
+							execChild(`taskkill /PID ${proc.pid} /T /F`, (err) => {
+								if (err) console.warn('taskkill failed:', err);
+							});
+						} catch (err) {
+							console.warn('taskkill exec failed:', err);
+						}
 					} else {
-						// Linux/macOS
+						// Unix: SIGKILL
 						proc.kill('SIGKILL');
 					}
 				}
@@ -48,75 +91,71 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 			}
 		};
 
+		// Benannte Abort-Listener-Funktion, damit removeEventListener funktioniert
+		const onAbort = () => {
+			// kill im nächsten Tick, um möglichen Sync-Problemen aus dem Weg zu gehen
+			setImmediate(killProcess);
+		};
+
+		// Falls das Signal schon abgebrochen ist -> kill und still resolve (Status wurde von caller gesetzt)
+		if (signal?.aborted) {
+			setImmediate(killProcess);
+			return resolve();
+		}
+
+		// Register Abort-Listener (einmalig)
 		if (signal) {
-			if (signal.aborted) {
-				// falls Signal bereits abgebrochen ist -> sofort beenden
-				try {
-					abortHandler();
-				} catch {
-					// ignorieren
-				}
-				downloads.update((items) =>
-					items.map((d) =>
-						d.id === item.id ? { ...d, status: 'error', errorMessage: 'aborted' } : d
-					)
-				);
-				return resolve();
-			}
-			// hinzufügt Listener (einmalig)
-			try {
-				signal?.addEventListener(
-					'abort',
-					() => {
-						setImmediate(() => abortHandler());
-					},
-					{ once: true }
-				);
-			} catch (err) {
-				console.warn('Failed to add abort listener:', err);
-			}
+			signal.addEventListener('abort', onAbort, { once: true });
 		}
 
 		// Prozess Ende
 		proc.on('close', async (code) => {
-			// safe remove listener
+			// Listener entfernen (falls noch vorhanden)
 			try {
-				signal?.removeEventListener('abort', abortHandler);
+				signal?.removeEventListener('abort', onAbort);
 			} catch {
 				// ignorieren
 			}
 
-			// ... Rest bleibt gleich
+			// Wenn Signal abgebrochen wurde: Stille Beendigung (Status bereits in process.removeFromQueue gesetzt)
 			if (signal?.aborted) {
-				await setStatus(item.id, 'error');
-				downloads.update((items) =>
-					items.map((d) =>
-						d.id === item.id ? { ...d, errorMessage: 'Vom Benutzer abgebrochen' } : d
-					)
-				);
 				return resolve();
 			}
 
 			if (code === 0) {
-				// ---- Datei-Info ermitteln ----
-				const files = fs.readdirSync(DOWNLOAD_FOLDER);
-				const downloadedFile = files.find((f) => f.includes(filename.split(' - ')[0]));
-				if (downloadedFile) {
-					const stats = fs.statSync(path.join(DOWNLOAD_FOLDER, downloadedFile));
-					downloads.update((items) =>
-						items.map((d) =>
-							d.id === item.id
-								? {
-										...d,
-										fileName: downloadedFile,
-										size: `${(stats.size / 1024 / 1024).toFixed(2)} MB`
-									}
-								: d
-						)
-					);
+				// Erfolg: Datei suchen und Metadaten setzen
+				try {
+					const files = fs.readdirSync(DOWNLOAD_FOLDER);
+					const downloadedFile = files.find((f) => f.includes(filename.split(' - ')[0]));
+					if (downloadedFile) {
+						const stats = fs.statSync(path.join(DOWNLOAD_FOLDER, downloadedFile));
+						downloads.update((items) =>
+							items.map((d) =>
+								d.id === item.id
+									? {
+											...d,
+											fileName: downloadedFile,
+											size: `${(stats.size / 1024 / 1024).toFixed(2)} MB`
+										}
+									: d
+							)
+						);
+					}
+				} catch (err) {
+					console.warn('Error while reading download folder:', err);
 				}
+
 				await setStatus(item.id, 'finished');
+			} else {
+				// Fehlerfall: stderr oder Exit-Code als Nachricht
+				const errorMessage =
+					stderrBuffer.join('\n').slice(0, 1000) || `yt-dlp exited with code ${code}`;
+
+				await setStatus(item.id, 'error', errorMessage);
+
+				console.error('[yt-dlp error]', errorMessage);
 			}
+
 			resolve();
 		});
 	});
