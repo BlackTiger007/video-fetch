@@ -3,7 +3,7 @@ import { concurrency, downloads, paused } from '$lib/server/store';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { get } from 'svelte/store';
-import { removeDownload } from '$lib/server/db';
+import { deleteDownload } from '$lib/server/db';
 
 export const load: PageServerLoad = () => {
 	const download = get(downloads);
@@ -46,7 +46,7 @@ export const actions = {
 			return fail(400, { error: (error as Error).message });
 		}
 	},
-	removeDownload: async ({ request }) => {
+	deleteDownload: async ({ request }) => {
 		const formData = await request.formData();
 
 		const id = formData.get('id')?.toString() || null;
@@ -55,7 +55,7 @@ export const actions = {
 			return fail(400, { error: 'Ungültige ID' });
 		}
 
-		await removeDownload(id);
+		await deleteDownload(id);
 
 		return { success: true };
 	}
