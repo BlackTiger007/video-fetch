@@ -32,14 +32,36 @@ export async function removeFromQueue(id: string) {
 	const controller = controllers.get(id);
 	if (!controller) return;
 
-	controller.abort(); // Task abbrechen
-	controllers.delete(id); // Cleanup
+	// Abort asynchron, und in try/catch einbetten, damit ein eventuell
+	// fehlerhafter 'abort' listener nicht synchron die Node-Process beendet.
+	try {
+		setImmediate(() => {
+			try {
+				if (!controller.signal.aborted) controller.abort();
+			} catch (err) {
+				// Nur loggen — nicht throwen.
+				console.warn('AbortController.abort threw:', err);
+			}
+		});
+	} catch {
+		// Fallback: falls setImmediate nicht verfügbar ist (sehr unwahrscheinlich),
+		// versuche trotzdem abort in geschütztem Block.
+		try {
+			if (!controller.signal.aborted) controller.abort();
+		} catch (err2) {
+			console.warn('Abort failed:', err2);
+		}
+	}
+
+	controllers.delete(id);
 
 	downloads.update((items) =>
-		items.map((i) => (i.id === id ? { ...i, errorMessage: 'User cancelled' } : i))
+		items.map((i) =>
+			i.id === id ? { ...i, status: 'error', errorMessage: 'Vom Benutzer abgebrochen' } : i
+		)
 	);
 
-	await setStatus(id, 'error'); // oder 'cancelled'
+	await setStatus(id, 'error');
 }
 
 export async function processDownloads() {
@@ -51,25 +73,19 @@ export async function processDownloads() {
 		const controller = new AbortController();
 		controllers.set(item.id, controller);
 
-		queue.add(
-			async ({ signal }) => {
-				await waitIfPaused();
+		// WICHTIG: wir geben das gleiche controller.signal an queue *und* an startDownload,
+		// damit alle Listener das gleiche Signal verwenden.
+		queue.add(async () => {
+			await waitIfPaused();
 
-				if (signal?.aborted) {
-					throw new Error('aborted');
-				}
+			// controller.signal hier bevorzugen, weil wir controller.abort() verwenden.
+			if (controller.signal.aborted) return;
 
-				try {
-					await startDownload(item, signal);
-				} catch (err) {
-					if (signal?.aborted) {
-						await setStatus(item.id, 'error'); // oder 'cancelled'
-						return;
-					}
-					throw err;
-				}
-			},
-			{ signal: controller.signal }
-		);
+			try {
+				await startDownload(item, controller.signal);
+			} catch {
+				// doppelte Behandlung unnötig
+			}
+		});
 	}
 }
