@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { maxConcurrency } from '$lib';
+	import Cancel from '$lib/assets/cancel.svelte';
+	import Copy from '$lib/assets/copy.svelte';
+	import Download from '$lib/assets/download.svelte';
+	import Retry from '$lib/assets/retry.svelte';
+	import Trash from '$lib/assets/trash.svelte';
 	import type { DownloadUpdate } from '$lib/types/download';
 	import type { PageProps } from './$types';
 	import { onMount } from 'svelte';
@@ -119,8 +124,12 @@
 							</div>
 
 							<div class="flex gap-1">
-								<button class="btn btn-ghost btn-xs" title="Link kopieren">📋</button>
-								<button class="btn text-error btn-ghost btn-xs" title="Abbrechen">✖</button>
+								<button class="btn btn-ghost btn-xs" title="Link kopieren">
+									<Copy class="size-4"></Copy>
+								</button>
+								<button class="btn text-error btn-ghost btn-xs" title="Abbrechen">
+									<Cancel class="size-4"></Cancel>
+								</button>
 							</div>
 						</div>
 
@@ -174,12 +183,24 @@
 								</td>
 								<td class="space-x-1 text-right">
 									{#if d.status === 'finished'}
-										<button class="btn btn-ghost btn-xs">⬇️</button>
+										<button class="btn btn-ghost btn-xs">
+											<Download class="size-4"></Download>
+										</button>
 									{/if}
 									{#if d.status === 'error'}
-										<button class="btn btn-ghost btn-xs">🔁</button>
+										<button class="btn btn-ghost btn-xs">
+											<Retry class="size-4"></Retry>
+										</button>
 									{/if}
-									<button class="btn text-error btn-ghost btn-xs">🗑️</button>
+									<form
+										action="?/removeDownload"
+										method="post"
+										class="btn text-error btn-ghost btn-xs"
+									>
+										<button>
+											<Trash class="size-4"></Trash>
+										</button>
+									</form>
 								</td>
 							</tr>
 						{/each}
