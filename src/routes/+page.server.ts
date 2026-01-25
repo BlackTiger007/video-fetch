@@ -3,7 +3,7 @@ import { concurrency, downloads, paused } from '$lib/server/store';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { get } from 'svelte/store';
-import { deleteDownload } from '$lib/server/db';
+import { deleteDownload, setStatus } from '$lib/server/db';
 import { removeFromQueue } from '$lib/server/process';
 import { processDownloads } from '$lib/server/process';
 
@@ -102,11 +102,7 @@ export const actions = {
 			return fail(400, { error: 'Ungültige ID' });
 		}
 
-		downloads.update((items) =>
-			items.map((item) =>
-				item.id === id ? { ...item, status: 'pending', errorMessage: null } : item
-			)
-		);
+		setStatus(id, 'pending', null);
 
 		void processDownloads();
 
