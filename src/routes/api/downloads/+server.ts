@@ -26,6 +26,7 @@ export const GET: RequestHandler = ({ request }) => {
 						id: d.id,
 						fileName: d.fileName,
 						status: d.status,
+						errorMessage: d.errorMessage,
 						progress: d.progress,
 						speed: d.speed,
 						eta: d.eta,
