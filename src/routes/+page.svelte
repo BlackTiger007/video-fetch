@@ -86,6 +86,11 @@
 			console.error('Kopieren fehlgeschlagen', err);
 		}
 	}
+
+	function removeFromStores(id: string) {
+		activeDownloads.update((list) => list.filter((d) => d.id !== id));
+		finishedDownloads.update((list) => list.filter((d) => d.id !== id));
+	}
 </script>
 
 <div class="mx-auto w-full max-w-4xl space-y-4 px-4">
@@ -233,12 +238,15 @@
 									<form
 										action="?/deleteDownload"
 										method="post"
+										use:enhance={() => {
+											activeDownloads.update((list) => list.filter((l) => l.id !== d.id));
+											finishedDownloads.update((list) => list.filter((l) => l.id !== d.id));
+										}}
 										class="btn text-error btn-ghost btn-xs"
-										use:enhance
 									>
 										<input type="hidden" name="id" value={d.id} />
-										<button>
-											<Trash class="size-4"></Trash>
+										<button type="submit">
+											<Trash class="size-4" />
 										</button>
 									</form>
 								</td>
