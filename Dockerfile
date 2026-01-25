@@ -36,6 +36,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
+# Datenverzeichnis erstellen
+RUN mkdir -p /app/data
 
 # Port freigeben
 EXPOSE 3000
