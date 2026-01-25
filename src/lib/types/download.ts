@@ -16,6 +16,7 @@ export interface DownloadItem extends Download {
 
 export interface DownloadUpdate {
 	id: string;
+	videoUrl: string;
 	fileName: string | null;
 	status: DownloadStatus;
 	errorMessage: string | null;
