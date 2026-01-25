@@ -38,3 +38,9 @@ export async function setStatus(id: string, status: DownloadStatus) {
 		})
 		.where(eq(downloadsSchema.id, id));
 }
+
+export async function removeDownload(id: string) {
+	await db.delete(downloadsSchema).where(eq(downloadsSchema.id, id));
+
+	downloads.update((d) => d.filter((i) => i.id !== id));
+}
