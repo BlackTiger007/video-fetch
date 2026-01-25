@@ -193,10 +193,12 @@
 										</button>
 									{/if}
 									<form
-										action="?/removeDownload"
+										action="?/deleteDownload"
 										method="post"
 										class="btn text-error btn-ghost btn-xs"
+										use:enhance
 									>
+										<input type="hidden" name="id" value={d.id} />
 										<button>
 											<Trash class="size-4"></Trash>
 										</button>
