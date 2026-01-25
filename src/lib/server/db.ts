@@ -16,27 +16,32 @@ export async function addDownloads(download: (typeof downloadsSchema.$inferInser
 	downloads.update((d) => [...d, ...newDownloads.map((item) => ({ ...item, progress: 0 }))]);
 }
 
-export async function setStatus(id: string, status: DownloadStatus) {
+export async function setStatus(id: string, status: DownloadStatus, errorMessage?: string | null) {
 	const now = new Date();
 
 	// 1️⃣ Update Store
 	downloads.update((items) =>
 		items.map((item) =>
 			item.id === id
-				? { ...item, status, finishedAt: status === 'finished' ? now : item.finishedAt }
+				? {
+						...item,
+						status,
+						errorMessage: status === 'error' && errorMessage ? errorMessage : null,
+						finishedAt: status === 'finished' ? now : item.finishedAt
+					}
 				: item
 		)
 	);
 
-	// 2️⃣ Update DB (await!)
-	await db
-		.update(downloadsSchema)
-		.set({
-			status,
-			updatedAt: now,
-			finishedAt: status === 'finished' ? now : null
-		})
-		.where(eq(downloadsSchema.id, id));
+	// 2️⃣ Update DB
+	const updateData: Partial<typeof downloadsSchema.$inferInsert> = {
+		status,
+		updatedAt: now,
+		finishedAt: status === 'finished' ? now : null
+	};
+	if (errorMessage || errorMessage === null) updateData.errorMessage = errorMessage;
+
+	await db.update(downloadsSchema).set(updateData).where(eq(downloadsSchema.id, id));
 }
 
 export async function deleteDownload(id: string) {
