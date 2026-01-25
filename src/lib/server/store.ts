@@ -4,6 +4,7 @@ import { db } from './db/index';
 import { downloads as downloadsSchema } from './db/schema';
 import type { DownloadItem } from '$lib/types/download';
 import { processDownloads, setConcurrency, setPause } from './process';
+import { inArray } from 'drizzle-orm';
 
 /**
  * Liste aller Downloads, die aktuell in der Queue oder in Bearbeitung sind.
@@ -12,8 +13,26 @@ import { processDownloads, setConcurrency, setPause } from './process';
 export const downloads = writable<DownloadItem[]>([]);
 
 (async () => {
+	// Alle "hängenden" Downloads als Fehler markieren
+	await db
+		.update(downloadsSchema)
+		.set({
+			status: 'error',
+			errorMessage: 'Download wurde durch einen Neustart oder Absturz beendet.'
+		})
+		.where(inArray(downloadsSchema.status, ['downloading', 'queued', 'pending']));
+
+	// Neu aus DB laden
 	const items = await db.select().from(downloadsSchema);
-	downloads.set(items.map((item) => ({ ...item, progress: 0 })));
+
+	downloads.set(
+		items.map((item) => ({
+			...item,
+			progress: 0
+		}))
+	);
+
+	// Queue neu starten (nur pending Downloads werden berücksichtigt)
 	void processDownloads();
 })();
 
