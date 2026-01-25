@@ -58,5 +58,16 @@ export const actions = {
 		await deleteDownload(id);
 
 		return { success: true };
+	},
+	cancelDownload: async ({ request }) => {
+		const formData = await request.formData();
+
+		const id = formData.get('id')?.toString() || null;
+
+		if (id?.length !== 37) {
+			return fail(400, { error: 'Ungültige ID' });
+		}
+
+		return { success: true };
 	}
 } satisfies Actions;
