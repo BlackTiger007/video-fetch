@@ -5,6 +5,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { get } from 'svelte/store';
 import { deleteDownload } from '$lib/server/db';
 import { removeFromQueue } from '$lib/server/process';
+import { processDownloads } from '$lib/server/process';
 
 export const load: PageServerLoad = () => {
 	const download = get(downloads);
@@ -70,6 +71,25 @@ export const actions = {
 		}
 
 		await removeFromQueue(id);
+
+		return { success: true };
+	},
+	retryDownload: async ({ request }) => {
+		const formData = await request.formData();
+
+		const id = formData.get('id')?.toString() || null;
+
+		if (id?.length !== 37) {
+			return fail(400, { error: 'Ungültige ID' });
+		}
+
+		downloads.update((items) =>
+			items.map((item) =>
+				item.id === id ? { ...item, status: 'pending', errorMessage: null } : item
+			)
+		);
+
+		void processDownloads();
 
 		return { success: true };
 	}
