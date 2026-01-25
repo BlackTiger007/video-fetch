@@ -197,9 +197,17 @@
 										</button>
 									{/if}
 									{#if d.status === 'error'}
-										<button class="btn btn-ghost btn-xs">
-											<Retry class="size-4"></Retry>
-										</button>
+										<form
+											action="?/retryDownload"
+											method="post"
+											class="btn btn-ghost btn-xs"
+											use:enhance
+										>
+											<input type="hidden" name="id" value={d.id} />
+											<button>
+												<Retry class="size-4"></Retry>
+											</button>
+										</form>
 									{/if}
 									<form
 										action="?/deleteDownload"
