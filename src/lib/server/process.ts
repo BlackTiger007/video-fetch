@@ -32,20 +32,20 @@ export async function removeFromQueue(id: string) {
 	const controller = controllers.get(id);
 	if (!controller) return;
 
-	// Abort asynchron, und in try/catch einbetten, damit ein eventuell
-	// fehlerhafter 'abort' listener nicht synchron die Node-Process beendet.
+	// Entferne Controller sofort aus Map — verhindert weitere Starts.
+	controllers.delete(id);
+
+	// Controller asynchron aborten, damit ein fehlerhafter listener nicht synchron ins Node-Stack wirft.
 	try {
 		setImmediate(() => {
 			try {
 				if (!controller.signal.aborted) controller.abort();
 			} catch (err) {
-				// Nur loggen — nicht throwen.
 				console.warn('AbortController.abort threw:', err);
 			}
 		});
 	} catch {
-		// Fallback: falls setImmediate nicht verfügbar ist (sehr unwahrscheinlich),
-		// versuche trotzdem abort in geschütztem Block.
+		// Fallback synchronous abort (sehr unwahrscheinlich)
 		try {
 			if (!controller.signal.aborted) controller.abort();
 		} catch (err2) {
@@ -53,15 +53,9 @@ export async function removeFromQueue(id: string) {
 		}
 	}
 
-	controllers.delete(id);
-
-	downloads.update((items) =>
-		items.map((i) =>
-			i.id === id ? { ...i, status: 'error', errorMessage: 'Vom Benutzer abgebrochen' } : i
-		)
-	);
-
-	await setStatus(id, 'error');
+	// UI/Store sofort aktualisieren — download.ts behandelt den ChildProcess-Kill,
+	// aber der sichtbare Status soll hier sofort 'abgebrochen' werden.
+	await setStatus(id, 'error', 'Vom Benutzer abgebrochen');
 }
 
 export async function processDownloads() {
@@ -73,18 +67,17 @@ export async function processDownloads() {
 		const controller = new AbortController();
 		controllers.set(item.id, controller);
 
-		// WICHTIG: wir geben das gleiche controller.signal an queue *und* an startDownload,
-		// damit alle Listener das gleiche Signal verwenden.
+		// Gib das Signal an startDownload weiter; task in queue nutzt ebenfalls dasselbe Signal.
 		queue.add(async () => {
 			await waitIfPaused();
 
-			// controller.signal hier bevorzugen, weil wir controller.abort() verwenden.
 			if (controller.signal.aborted) return;
 
 			try {
 				await startDownload(item, controller.signal);
-			} catch {
-				// doppelte Behandlung unnötig
+			} catch (err) {
+				// StartDownload meldet Fehler in store/db; hier kein zusätzliches Handling
+				console.warn('startDownload failed for', item.id, err);
 			}
 		});
 	}
