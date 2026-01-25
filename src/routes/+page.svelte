@@ -209,12 +209,12 @@
 								>
 									{d.status === 'error' ? (d.errorMessage ?? 'Unbekannter Fehler') : '—'}
 								</td>
-								<td class="space-x-1 text-right">
-									{#if d.status === 'finished'}
+								<td class="flex justify-end space-x-1">
+									<!-- {#if d.status === 'finished'}
 										<button class="btn btn-ghost btn-xs">
 											<Download class="size-4"></Download>
 										</button>
-									{/if}
+									{/if} -->
 									{#if d.status === 'error'}
 										<form
 											action="?/retryDownload"
