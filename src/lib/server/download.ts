@@ -72,6 +72,11 @@ export async function startDownload(item: DownloadItem) {
 		// stderr nur loggen
 		proc.stderr.on('data', (data) => {
 			console.error('[yt-dlp]', data.toString());
+			downloads.update((items) =>
+				items.map((i) =>
+					i.id === item.id ? { ...i, errorMessage: data.toString().slice(0, 1000) } : i
+				)
+			);
 		});
 
 		// Prozess beendet
