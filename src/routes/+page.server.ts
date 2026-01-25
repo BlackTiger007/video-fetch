@@ -21,8 +21,6 @@ export const load: PageServerLoad = () => {
 
 export const actions = {
 	setPause: async ({ request }) => {
-		console.log('Backend: setPause');
-
 		try {
 			const formData = await request.formData();
 
@@ -38,8 +36,6 @@ export const actions = {
 		}
 	},
 	setConcurrency: async ({ request }) => {
-		console.log('Backend: setConcurrency');
-
 		try {
 			const formData = await request.formData();
 
@@ -55,8 +51,6 @@ export const actions = {
 		}
 	},
 	deleteDownload: async ({ request }) => {
-		console.log('Backend: deleteDownload');
-
 		const formData = await request.formData();
 
 		const id = formData.get('id')?.toString() || null;
@@ -71,8 +65,6 @@ export const actions = {
 		return { success: true };
 	},
 	cancelDownload: async ({ request }) => {
-		console.log('Backend: cancelDownload');
-
 		const formData = await request.formData();
 
 		const id = formData.get('id')?.toString() || null;
@@ -91,8 +83,6 @@ export const actions = {
 		return { success: true };
 	},
 	retryDownload: async ({ request }) => {
-		console.log('Backend: retryDownload');
-
 		const formData = await request.formData();
 
 		const id = formData.get('id')?.toString() || null;
