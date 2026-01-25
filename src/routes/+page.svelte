@@ -76,6 +76,16 @@
 
 		return parts.join(' · ');
 	}
+
+	async function copyUrl(url?: string) {
+		if (!url) return;
+		try {
+			await navigator.clipboard.writeText(url);
+			alert('URL in die Zwischenablage kopiert!');
+		} catch (err) {
+			console.error('Kopieren fehlgeschlagen', err);
+		}
+	}
 </script>
 
 <div class="mx-auto w-full max-w-4xl space-y-4 px-4">
@@ -124,7 +134,11 @@
 							</div>
 
 							<div class="flex gap-1">
-								<button class="btn btn-ghost btn-xs" title="Link kopieren">
+								<button
+									class="btn btn-ghost btn-xs"
+									title="Link kopieren"
+									onclick={() => copyUrl(d.videoUrl)}
+								>
 									<Copy class="size-4"></Copy>
 								</button>
 								<form
@@ -209,6 +223,13 @@
 											</button>
 										</form>
 									{/if}
+									<button
+										class="btn btn-ghost btn-xs"
+										title="Link kopieren"
+										onclick={() => copyUrl(d.videoUrl)}
+									>
+										<Copy class="size-4"></Copy>
+									</button>
 									<form
 										action="?/deleteDownload"
 										method="post"
