@@ -127,9 +127,18 @@
 								<button class="btn btn-ghost btn-xs" title="Link kopieren">
 									<Copy class="size-4"></Copy>
 								</button>
-								<button class="btn text-error btn-ghost btn-xs" title="Abbrechen">
-									<Cancel class="size-4"></Cancel>
-								</button>
+								<form
+									action="?/cancelDownload"
+									method="post"
+									class="btn text-error btn-ghost btn-xs"
+									use:enhance
+									title="Abbrechen"
+								>
+									<input type="hidden" name="id" value={d.id} />
+									<button>
+										<Cancel class="size-4"></Cancel>
+									</button>
+								</form>
 							</div>
 						</div>
 
