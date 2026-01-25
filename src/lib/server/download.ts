@@ -152,8 +152,6 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 					stderrBuffer.join('\n').slice(0, 1000) || `yt-dlp exited with code ${code}`;
 
 				await setStatus(item.id, 'error', errorMessage);
-
-				console.error('[yt-dlp error]', errorMessage);
 			}
 
 			resolve();
