@@ -6,6 +6,9 @@ import { setStatus } from './db';
 
 const queue = new PQueue({ concurrency: 1 });
 
+// Map: Download-ID → AbortController
+const controllers = new Map<string, AbortController>();
+
 export function setConcurrency(value: number) {
 	queue.concurrency = Number(value) || 1;
 }
@@ -25,21 +28,48 @@ function waitIfPaused() {
 	});
 }
 
+export async function removeFromQueue(id: string) {
+	const controller = controllers.get(id);
+	if (!controller) return;
+
+	controller.abort(); // Task abbrechen
+	controllers.delete(id); // Cleanup
+
+	downloads.update((items) =>
+		items.map((i) => (i.id === id ? { ...i, errorMessage: 'User cancelled' } : i))
+	);
+
+	await setStatus(id, 'error'); // oder 'cancelled'
+}
+
 export async function processDownloads() {
 	const list = get(downloads).filter((d) => d.status === 'pending');
 
 	for (const item of list) {
-		// Prevent double-adding
 		await setStatus(item.id, 'queued');
 
-		queue.add(async () => {
-			await waitIfPaused();
-			try {
-				await startDownload(item);
-			} catch (err) {
-				console.error('startDownload error', err);
-				item.status = 'error';
-			}
-		});
+		const controller = new AbortController();
+		controllers.set(item.id, controller);
+
+		queue.add(
+			async ({ signal }) => {
+				await waitIfPaused();
+
+				if (signal?.aborted) {
+					throw new Error('aborted');
+				}
+
+				try {
+					await startDownload(item, signal);
+				} catch (err) {
+					if (signal?.aborted) {
+						await setStatus(item.id, 'error'); // oder 'cancelled'
+						return;
+					}
+					throw err;
+				}
+			},
+			{ signal: controller.signal }
+		);
 	}
 }
