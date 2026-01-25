@@ -4,6 +4,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { get } from 'svelte/store';
 import { deleteDownload } from '$lib/server/db';
+import { removeFromQueue } from '$lib/server/process';
 
 export const load: PageServerLoad = () => {
 	const download = get(downloads);
@@ -67,6 +68,8 @@ export const actions = {
 		if (id?.length !== 37) {
 			return fail(400, { error: 'Ungültige ID' });
 		}
+
+		await removeFromQueue(id);
 
 		return { success: true };
 	}
