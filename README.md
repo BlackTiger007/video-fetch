@@ -74,6 +74,49 @@ PUBLIC_MAX_CONCURRENCY=5
 
 Downloaded files will be available in the configured `DOWNLOAD_PATH`.
 
+## API Endpoints
+
+### GET "/api/downloads"
+
+Server-Sent Events (SSE) endpoint for real-time download updates. This is used on the main page to display active downloads.
+
+**Usage:**
+
+```javascript
+const eventSource = new EventSource('/api/downloads');
+eventSource.onmessage = function(event) {
+  console.log('New message:', event.data);
+};
+```
+
+### POST "/api/add"
+
+Endpoint for adding multiple video downloads at once. Accepts an array of download objects.
+
+**Options:**
+
+- `videoUrl`: Required. The URL of the video to download.
+- `fileName`: Optional. A custom filename for the downloaded file (max 250 characters, no extension).
+- `appendTitle`: Optional. Whether to append the webpage title to the filename. Default is `false`.
+- `quality`: Optional. The quality mode for the download (`best`, `worst`, or `audio`). Default is `"best"`.
+
+**Example Request:**
+
+```sh
+curl -X POST http://localhost:3000/api/add \
+-H "Content-Type: application/json" \
+-d '[
+  {
+    "videoUrl": "https://example.com/video1.mp4",
+    "fileName": "Video1"
+  },
+  {
+    "videoUrl": "https://example.com/video2.mp4",
+    "fileName": "Video2"
+  }
+]'
+```
+
 ## Running with Docker
 
 ```cmd
