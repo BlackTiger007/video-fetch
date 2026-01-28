@@ -7,17 +7,18 @@ import type { DownloadStatus } from '$lib/types/download';
 export async function addDownload(download: typeof downloadsSchema.$inferInsert) {
 	const newDownload = await db.insert(downloadsSchema).values(download).returning();
 
-	downloads.update((d) => [...d, ...newDownload.map((item) => ({ ...item, progress: 0 }))]);
+	downloads.update((d) => [...d, ...newDownload.map((item) => ({ ...item, progress: null }))]);
 }
 
 export async function addDownloads(download: (typeof downloadsSchema.$inferInsert)[]) {
 	const newDownloads = await db.insert(downloadsSchema).values(download).returning();
 
-	downloads.update((d) => [...d, ...newDownloads.map((item) => ({ ...item, progress: 0 }))]);
+	downloads.update((d) => [...d, ...newDownloads.map((item) => ({ ...item, progress: null }))]);
 }
 
 export async function setStatus(id: string, status: DownloadStatus, errorMessage?: string | null) {
 	const now = new Date();
+	const finishedAt = status === 'finished' || status === 'error' ? now : null;
 
 	// 1️⃣ Update Store
 	downloads.update((items) =>
@@ -26,8 +27,8 @@ export async function setStatus(id: string, status: DownloadStatus, errorMessage
 				? {
 						...item,
 						status,
-						errorMessage: status === 'error' && errorMessage ? errorMessage : null,
-						finishedAt: status === 'finished' ? now : item.finishedAt
+						errorMessage: errorMessage ? errorMessage : null,
+						finishedAt: finishedAt
 					}
 				: item
 		)
@@ -36,8 +37,7 @@ export async function setStatus(id: string, status: DownloadStatus, errorMessage
 	// 2️⃣ Update DB
 	const updateData: Partial<typeof downloadsSchema.$inferInsert> = {
 		status,
-		updatedAt: now,
-		finishedAt: status === 'finished' ? now : null
+		finishedAt: finishedAt
 	};
 	if (errorMessage || errorMessage === null) updateData.errorMessage = errorMessage;
 
