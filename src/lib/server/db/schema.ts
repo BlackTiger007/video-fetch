@@ -13,13 +13,13 @@ export const downloads = sqliteTable(
 		quality: text('quality').notNull().$type<DownloadQuality>(),
 		status: text('status').notNull().$type<DownloadStatus>(),
 		errorMessage: text('error_message'),
-		createdAt: integer('created_at', { mode: 'timestamp' })
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.$defaultFn(() => new Date()),
-		updatedAt: integer('updated_at', { mode: 'timestamp' })
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.$onUpdateFn(() => new Date()),
-		finishedAt: integer('finished_at', { mode: 'timestamp' })
+		finishedAt: integer('finished_at', { mode: 'timestamp_ms' })
 	},
 	(t) => [uniqueIndex('uq_downloads_video_url').on(t.videoUrl)]
 );
