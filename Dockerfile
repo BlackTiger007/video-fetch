@@ -1,5 +1,5 @@
 # --- Build Stage ---
-FROM node:24.12.0-slim
+FROM node:24.12.0-slim AS builder
 WORKDIR /app
 
 RUN apt-get update && \
