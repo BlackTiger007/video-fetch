@@ -1,17 +1,10 @@
 import type { Download } from '$lib/server/db/schema';
+import type { VideoProgress } from 'ytdlp-nodejs';
 
 export type DownloadStatus = 'pending' | 'queued' | 'downloading' | 'paused' | 'finished' | 'error';
 
-interface fragment {
-	current: number;
-	total: number;
-}
-
 export interface DownloadItem extends Download {
-	progress: number; // 0-100%
-	speed?: string;
-	eta?: string;
-	fragment?: fragment;
+	progress: VideoProgress | null;
 }
 
 export interface DownloadUpdate {
@@ -20,16 +13,12 @@ export interface DownloadUpdate {
 	fileName: string | null;
 	status: DownloadStatus;
 	errorMessage: string | null;
-	progress: number; // 0-100
-	speed?: string;
-	eta?: string;
-	size?: string;
-	fragment?: fragment;
+	progress: VideoProgress | null;
 }
 
 export type DownloadQuality =
-	| 'best'
-	| 'worst'
+	| 'highest'
+	| 'lowest'
 	| '2160p'
 	| '1440p'
 	| '1080p'
