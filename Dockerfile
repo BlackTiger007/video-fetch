@@ -2,21 +2,21 @@
 FROM node:24.12.0-slim AS builder
 WORKDIR /app
 
-# Systemtools + pnpm
 RUN apt-get update && \
     apt-get install -y build-essential python3 ffmpeg curl git && \
-    npm install -g pnpm
+    npm install -g pnpm && \
+    mkdir -p /usr/local/bin && \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp
 
-# CI=true setzen, damit pnpm ohne TTY läuft
 ENV CI=true
 
-# Code kopieren
 COPY . .
 
-# Dependencies installieren
+RUN mkdir -p /app/data
+
 RUN pnpm install --frozen-lockfile --prod=false
 
-# SvelteKit Build
 RUN pnpm run build
 RUN pnpm prune --production
 
