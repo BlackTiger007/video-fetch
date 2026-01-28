@@ -162,7 +162,6 @@
 					<select name="quality" class="select-bordered select w-full">
 						<option value="highest">Beste Qualität</option>
 						<option value="lowest">Schlechteste Qualität</option>
-						<option value="audio">Nur Audio</option>
 					</select>
 				</label>
 
