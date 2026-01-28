@@ -28,7 +28,7 @@ export const downloads = writable<DownloadItem[]>([]);
 	downloads.set(
 		items.map((item) => ({
 			...item,
-			progress: 0
+			progress: null
 		}))
 	);
 
