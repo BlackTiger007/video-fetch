@@ -3,7 +3,7 @@ import { sanitizeFilename } from '$lib/server/utils';
 import type { DownloadAdd } from '$lib/server/db/schema';
 
 const URL_PATTERN = /^(https?:\/\/).+$/i;
-const MAX_FILENAME_LENGTH = 250;
+const MAX_FILENAME_LENGTH = 200;
 
 export type IncomingDownload = {
 	videoUrl: string;
