@@ -9,43 +9,117 @@
 	let importText = '';
 	let importFile: File | null = null;
 	let fileInput: HTMLInputElement | null = null;
-	const preview = writable([] as { url: string; filename: string | null }[]);
 
+	const preview = writable([] as { url: string; filename: string | null }[]);
+	let batchError: string | null = null;
+
+	const MAX_FILENAME_LENGTH = 200;
+
+	/* -----------------------------
+	 * Parsing
+	 * ----------------------------- */
 	function parseTSV(text: string) {
 		const lines = text
 			.split(/\r?\n/)
 			.map((l) => l.trim())
 			.filter(Boolean);
+
 		const rows: { url: string; filename: string | null }[] = [];
+
 		for (const line of lines) {
-			const cols = line.split('\t');
-			rows.push({ url: (cols[0] || '').trim(), filename: (cols[1] || '').trim() || null });
+			const [url = '', filename = ''] = line.split('\t');
+			rows.push({
+				url: url.trim(),
+				filename: filename.trim() || null
+			});
 		}
+
 		preview.set(rows);
 	}
 
-	function onFileChange(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const f = input.files && input.files[0];
-		if (f) {
-			importFile = f;
-			f.text().then((t) => {
-				importText = t; // Datei wird in Textarea geladen
-				parseTSV(t);
-			});
+	/* -----------------------------
+	 * Validation
+	 * ----------------------------- */
+	function validateTSV(text: string): boolean {
+		batchError = null;
+
+		const lines = text.split(/\r?\n/);
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			const tabIndex = line.indexOf('\t');
+
+			if (tabIndex === -1) continue;
+
+			const name = line.slice(tabIndex + 1);
+
+			if (name.length > MAX_FILENAME_LENGTH) {
+				batchError = `Line ${i + 1}: Filename exceeds ${MAX_FILENAME_LENGTH} characters (${name.length})`;
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/* -----------------------------
+	 * Textarea handling
+	 * ----------------------------- */
+	function updateFromTextarea(value: string) {
+		importText = value;
+
+		// Datei bewusst verwerfen, sobald manuell editiert wird
+		if (fileInput) fileInput.value = '';
+		importFile = null;
+
+		if (validateTSV(importText)) {
+			parseTSV(importText);
 		} else {
-			importFile = null;
 			preview.set([]);
 		}
 	}
 
-	function onTextEdit() {
-		// Sobald der Nutzer manuell editiert, Datei bewusst verwerfen
-		if (fileInput) fileInput.value = '';
-		importFile = null;
+	function handleTextareaKeydown(e: KeyboardEvent) {
+		if (e.key !== 'Tab') return;
+
+		e.preventDefault();
+
+		const el = e.currentTarget as HTMLTextAreaElement;
+		const start = el.selectionStart;
+		const end = el.selectionEnd;
+
+		const tab = '\t';
+
+		const next = importText.slice(0, start) + tab + importText.slice(end);
+
+		updateFromTextarea(next);
+
+		queueMicrotask(() => {
+			el.selectionStart = el.selectionEnd = start + tab.length;
+		});
 	}
 
-	$: if (importText !== undefined) parseTSV(importText);
+	/* -----------------------------
+	 * File handling
+	 * ----------------------------- */
+	function onFileChange(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const f = input.files?.[0];
+
+		if (!f) {
+			importFile = null;
+			preview.set([]);
+			return;
+		}
+
+		importFile = f;
+
+		f.text().then((text) => {
+			importText = text;
+			validateTSV(text);
+			parseTSV(text);
+		});
+	}
 </script>
 
 <div class="w-full max-w-4xl px-4">
@@ -101,7 +175,7 @@
 						placeholder="Meine Datei (Episode 1)"
 					/>
 					<span class="text-sm text-gray-500">
-						Erlaubt: Buchstaben, Zahlen, Leerzeichen, (), [], -, _ (max. 250)
+						Erlaubt: Buchstaben, Zahlen, Leerzeichen, (), [], -, _ (max. 200)
 					</span>
 				</label>
 
@@ -120,12 +194,12 @@
 			method="POST"
 			action="?/importBatch"
 			enctype="multipart/form-data"
-			class="mb-6 w-full min-w-fit rounded-lg bg-base-100 p-6 shadow-lg"
+			class="rounded-lg bg-base-100 p-6 shadow-lg"
 			use:enhance
 		>
-			<div class="grid w-full gap-4">
+			<div class="grid gap-4">
 				<div>
-					<label for="import_file" class="font-medium">Import-Datei (.txt, Tab-getrennt)</label>
+					<label for="import_file" class="font-medium">Import-Datei (.txt, TSV)</label>
 					<input
 						bind:this={fileInput}
 						type="file"
@@ -135,9 +209,6 @@
 						class="file-input-bordered file-input mt-2 w-full"
 						onchange={onFileChange}
 					/>
-					<span class="mt-1 block text-sm text-gray-500">
-						Format: URL\tDateiname (Dateiname optional). Jede Zeile ein Eintrag.
-					</span>
 				</div>
 
 				<div>
@@ -146,18 +217,25 @@
 						name="import_text"
 						id="import_text"
 						rows={8}
-						oninput={onTextEdit}
 						bind:value={importText}
 						class="textarea-bordered textarea mt-2 w-full"
-						placeholder="https://example.com/video1\tMein Video 1\nhttps://example.com/video2\t"
+						placeholder={`https://example.com/video1\tMein Video 1`}
+						oninput={(e) => updateFromTextarea(e.currentTarget.value)}
+						onkeydown={handleTextareaKeydown}
 					></textarea>
 				</div>
+
+				{#if batchError}
+					<div class="alert alert-warning">
+						<span>{batchError}</span>
+					</div>
+				{/if}
 
 				<div>
 					<p class="font-medium">Vorschau</p>
 					<div class="mt-2 max-h-56 overflow-auto rounded border p-2">
 						{#if $preview.length === 0}
-							<p class="text-sm text-gray-500">Keine Zeilen zum Anzeigen.</p>
+							<p class="text-sm text-gray-500">Keine gültigen Einträge.</p>
 						{:else}
 							<table class="table w-full">
 								<thead>
@@ -181,8 +259,9 @@
 					</div>
 				</div>
 
-				<button type="submit" class="btn w-full btn-primary">Importieren ({$preview.length})</button
-				>
+				<button class="btn w-full btn-primary" type="submit" disabled={!!batchError}>
+					Importieren ({$preview.length})
+				</button>
 			</div>
 		</form>
 	{/if}
