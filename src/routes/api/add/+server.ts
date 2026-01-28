@@ -19,7 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const videoUrl = (download.videoUrl || '').trim();
 		let fileName = (download.fileName || '').trim() || null;
 		const appendTitle = download.appendTitle ?? false;
-		const quality = download.quality ?? 'best';
+		const quality = download.quality ?? 'highest';
 
 		if (!videoUrl) {
 			return new Response(JSON.stringify({ error: `Leere URL in Zeile ${index}` }), {
