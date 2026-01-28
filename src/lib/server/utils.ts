@@ -9,7 +9,7 @@ const MULTI_SPACE = /\s+/g;
 
 export function sanitizeFilename(input: string): string {
 	return input
-		.replace(INVALID_FILENAME_CHARS, '_') // Verbotene Zeichen ersetzen
+		.replace(INVALID_FILENAME_CHARS, '-') // Verbotene Zeichen ersetzen
 		.replace(CONTROL_CHARS, '') // Steuerzeichen entfernen
 		.replace(MULTI_SPACE, ' ') // Spaces normalisieren
 		.replace(/[. ]+$/, '') // Punkte/Spaces am Ende entfernen
