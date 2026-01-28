@@ -16,17 +16,7 @@ export interface DownloadUpdate {
 	progress: VideoProgress | null;
 }
 
-export type DownloadQuality =
-	| 'highest'
-	| 'lowest'
-	| '2160p'
-	| '1440p'
-	| '1080p'
-	| '720p'
-	| '480p'
-	| '360p'
-	| '240p'
-	| 'audio';
+export type DownloadQuality = 'highest' | 'lowest';
 
 export type YtDlpFormat = {
 	format?: string; // für -f
