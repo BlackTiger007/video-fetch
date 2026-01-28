@@ -16,38 +16,49 @@
 	const activeDownloads = writable<DownloadUpdate[]>([]);
 	const finishedDownloads = writable<DownloadUpdate[]>([]);
 
+	/* ------------------------------
+	   Helper: Konsistente Store-Logik
+	-------------------------------- */
+
+	function removeFromFinished(id: string) {
+		finishedDownloads.update((list) => list.filter((d) => d.id !== id));
+	}
+
+	function removeFromAll(id: string) {
+		activeDownloads.update((list) => list.filter((d) => d.id !== id));
+		finishedDownloads.update((list) => list.filter((d) => d.id !== id));
+	}
+
+	/* ------------------------------
+	   SSE Initialisierung
+	-------------------------------- */
+
 	onMount(() => {
 		const evtSource = new EventSource('/api/downloads');
 
-		// Initiale fertige Downloads setzen
-		const initialFinished = data.download.filter((d) => ['finished', 'error'].includes(d.status));
-		finishedDownloads.set(initialFinished);
+		// Initialzustand aus SSR
+		finishedDownloads.set(data.download.filter((d) => ['finished', 'error'].includes(d.status)));
 
-		const initialActive = data.download.filter((d) =>
-			['downloading', 'pending', 'queued', 'paused'].includes(d.status)
+		activeDownloads.set(
+			data.download.filter((d) => ['downloading', 'pending', 'queued', 'paused'].includes(d.status))
 		);
-		activeDownloads.set(initialActive);
 
 		evtSource.onmessage = (event) => {
 			try {
 				const updates: DownloadUpdate[] = JSON.parse(event.data);
 
-				// Fertige Downloads (finished / error)
+				// Fertige / fehlerhafte
 				const finished = updates.filter((d) => ['finished', 'error'].includes(d.status));
 
-				// Aktuelle fertige Downloads
-				const currentFinished = get(finishedDownloads);
+				finishedDownloads.update((current) => {
+					const map = new Map(current.map((d) => [d.id, d]));
+					for (const d of finished) map.set(d.id, d);
+					return Array.from(map.values());
+				});
 
-				// Neue fertige Downloads hinzufügen
-				const newFinished = finished.filter((d) => !currentFinished.find((f) => f.id === d.id));
-				if (newFinished.length) {
-					finishedDownloads.update((f) => [...f, ...newFinished]);
-				}
-
-				// IDs der fertigen Downloads
 				const finishedIds = finished.map((d) => d.id);
 
-				// Aktive Downloads: nur die, die noch nicht fertig sind
+				// Aktive → niemals fertige enthalten
 				activeDownloads.set(
 					updates.filter(
 						(d) =>
@@ -62,6 +73,10 @@
 
 		return () => evtSource.close();
 	});
+
+	/* ------------------------------
+	   UI Helpers
+	-------------------------------- */
 
 	function statusLabel(status: string) {
 		switch (status) {
@@ -81,15 +96,12 @@
 	}
 
 	function formatInfo(d: DownloadUpdate) {
-		const parts: string[] = [];
-
 		if (!d.progress) return 'Keine Infos';
 
-		parts.push(d.progress.percentage_str);
-		parts.push(d.progress.total_str);
-		parts.push(d.progress.speed_str);
+		const parts: string[] = [d.progress.percentage_str, d.progress.total_str, d.progress.speed_str];
+
 		if (d.progress.eta) parts.push(`ETA ${d.progress.eta_str}`);
-		parts.push(d.progress.downloaded_str + '/' + d.progress.total_str);
+		parts.push(`${d.progress.downloaded_str}/${d.progress.total_str}`);
 
 		return parts.join(' · ');
 	}
@@ -102,11 +114,6 @@
 		} catch (err) {
 			console.error('Kopieren fehlgeschlagen', err);
 		}
-	}
-
-	function removeFromStores(id: string) {
-		activeDownloads.update((list) => list.filter((d) => d.id !== id));
-		finishedDownloads.update((list) => list.filter((d) => d.id !== id));
 	}
 </script>
 
@@ -124,9 +131,7 @@
 				class="range range-primary"
 				onchange={(e) => e.currentTarget.form?.requestSubmit()}
 			/>
-			<p class="text-sm text-gray-500">
-				Aktuell: {data.parallelDownloads}
-			</p>
+			<p class="text-sm text-gray-500">Aktuell: {data.parallelDownloads}</p>
 		</form>
 
 		<form method="POST" action="?/setPause" use:enhance>
@@ -147,12 +152,8 @@
 					<div class="rounded-lg border bg-base-200 p-3">
 						<div class="flex justify-between gap-3">
 							<div class="min-w-0">
-								<p class="truncate font-medium">
-									{d.fileName ?? 'Unbenannt'}
-								</p>
-								<p class="text-xs text-gray-500">
-									{statusLabel(d.status)}
-								</p>
+								<p class="truncate font-medium">{d.fileName ?? 'Unbenannt'}</p>
+								<p class="text-xs text-gray-500">{statusLabel(d.status)}</p>
 							</div>
 
 							<div class="flex gap-1">
@@ -161,19 +162,17 @@
 									title="Link kopieren"
 									onclick={() => copyUrl(d.videoUrl)}
 								>
-									<Copy class="size-4"></Copy>
+									<Copy class="size-4" />
 								</button>
+
 								<form
 									action="?/cancelDownload"
 									method="post"
 									class="btn text-error btn-ghost btn-xs"
 									use:enhance
-									title="Abbrechen"
 								>
 									<input type="hidden" name="id" value={d.id} />
-									<button>
-										<Cancel class="size-4"></Cancel>
-									</button>
+									<button><Cancel class="size-4" /></button>
 								</form>
 							</div>
 						</div>
@@ -187,9 +186,7 @@
 							</div>
 						{/if}
 
-						<p class="mt-1 text-xs text-gray-500">
-							{formatInfo(d)}
-						</p>
+						<p class="mt-1 text-xs text-gray-500">{formatInfo(d)}</p>
 					</div>
 				{/each}
 			</div>
@@ -198,7 +195,7 @@
 		{/if}
 	</section>
 
-	<!-- Abgeschlossene / Fehler -->
+	<!-- Abgeschlossen -->
 	<section class="rounded-lg bg-base-100 p-4 shadow">
 		<h2 class="mb-3 text-lg font-semibold">Abgeschlossen</h2>
 
@@ -216,57 +213,42 @@
 					<tbody>
 						{#each $finishedDownloads as d (d.id)}
 							<tr class={d.status === 'error' ? 'bg-error/10' : ''}>
-								<td class="max-w-xs truncate" title={d.fileName ?? 'Unbenannt'}>
-									{d.fileName ?? 'Unbenannt'}
-								</td>
+								<td class="max-w-xs truncate">{d.fileName ?? 'Unbenannt'}</td>
 								<td class={d.status === 'error' ? 'text-error' : 'text-success'}>
 									{statusLabel(d.status)}
 								</td>
-								<td
-									class="text-xs text-gray-500"
-									title={d.status === 'error' ? (d.errorMessage ?? 'Unbekannter Fehler') : '—'}
-								>
+								<td class="text-xs text-gray-500">
 									{d.status === 'error' ? (d.errorMessage ?? 'Unbekannter Fehler') : '—'}
 								</td>
-								<td class="flex justify-end space-x-1">
-									<!-- {#if d.status === 'finished'}
-										<button class="btn btn-ghost btn-xs">
-											<Download class="size-4"></Download>
-										</button>
-									{/if} -->
+								<td class="flex justify-end gap-1">
 									{#if d.status === 'error'}
 										<form
 											action="?/retryDownload"
 											method="post"
+											use:enhance={() => removeFromFinished(d.id)}
 											class="btn btn-ghost btn-xs"
-											use:enhance
 										>
 											<input type="hidden" name="id" value={d.id} />
-											<button>
-												<Retry class="size-4"></Retry>
-											</button>
+											<button><Retry class="size-4" /></button>
 										</form>
 									{/if}
+
 									<button
 										class="btn btn-ghost btn-xs"
 										title="Link kopieren"
 										onclick={() => copyUrl(d.videoUrl)}
 									>
-										<Copy class="size-4"></Copy>
+										<Copy class="size-4" />
 									</button>
+
 									<form
 										action="?/deleteDownload"
 										method="post"
-										use:enhance={() => {
-											activeDownloads.update((list) => list.filter((l) => l.id !== d.id));
-											finishedDownloads.update((list) => list.filter((l) => l.id !== d.id));
-										}}
+										use:enhance={() => removeFromAll(d.id)}
 										class="btn text-error btn-ghost btn-xs"
 									>
 										<input type="hidden" name="id" value={d.id} />
-										<button type="submit">
-											<Trash class="size-4" />
-										</button>
+										<button><Trash class="size-4" /></button>
 									</form>
 								</td>
 							</tr>
