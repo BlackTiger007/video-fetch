@@ -16,9 +16,6 @@ COPY . .
 # Dependencies installieren
 RUN pnpm install --frozen-lockfile --prod=false
 
-# Environment variables for build stage
-ENV DATABASE_PATH=/app/data/downloads.db
-
 # SvelteKit Build
 RUN pnpm run build
 RUN pnpm prune --production
