@@ -18,7 +18,7 @@ ENV CI=true
 
 COPY . .
 
-RUN mkdir -p /app/data
+RUN mkdir -p /data
 
 RUN pnpm install --frozen-lockfile --prod=false
 
