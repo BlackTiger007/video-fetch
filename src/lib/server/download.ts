@@ -1,7 +1,6 @@
 import { exec as execChild } from 'child_process';
 import path from 'path';
 import { DOWNLOAD_FOLDER } from './config';
-import { mapQualityToFormat } from './ks';
 import { setStatus } from './db';
 import type { DownloadItem } from '$lib/types/download';
 import { downloads } from './store';
@@ -10,16 +9,18 @@ import type { VideoProgress } from 'ytdlp-nodejs';
 
 export async function startDownload(item: DownloadItem, signal?: AbortSignal): Promise<void> {
 	const output = path.join(DOWNLOAD_FOLDER, `${item.fileName}.%(ext)s`);
-	const qualityArgs = mapQualityToFormat(item.quality);
 	const stderrBuffer: string[] = [];
 
 	await setStatus(item.id, 'downloading');
 
 	const result = ytdlp.download(item.videoUrl, {
 		output: output,
-		formatSort: qualityArgs.sort ? [qualityArgs.sort] : undefined,
 		progress: true,
-		abortOnError: true
+		abortOnError: true,
+		format: {
+			filter: 'mergevideo',
+			quality: item.quality ?? undefined
+		}
 	});
 
 	// stderr sammeln
