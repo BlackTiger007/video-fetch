@@ -1,13 +1,18 @@
 # --- Build Stage ---
-FROM node:24.12.0-slim AS builder
+FROM node:24.12.0-slim
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y build-essential python3 ffmpeg curl git && \
+    apt-get install -y ffmpeg curl unzip && \
+    ln -s $(which ffmpeg) /usr/local/bin/ffmpeg && \
     npm install -g pnpm && \
     mkdir -p /usr/local/bin && \
+    # yt-dlp
     curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp
+    chmod a+rx /usr/local/bin/yt-dlp && \
+    # Deno
+    curl -fsSL https://deno.land/x/install/install.sh | sh && \
+    ln -s /root/.deno/bin/deno /usr/local/bin/deno
 
 ENV CI=true
 
