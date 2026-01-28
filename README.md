@@ -11,7 +11,7 @@ Video Fetcher provides a simple web UI for downloading videos from URLs with con
 ### Features
 
 - Add videos via URL and download them directly.
-- Supports multiple quality modes: `best`, `worst`, and audio-only.
+- Supports multiple quality modes: `highest`, `lowest`, and audio-only.
 - Optional custom filenames or automatic appending of the webpage title.
 - Separate views for active and completed downloads.
 - Web interface runs on **port 3000** by default.
@@ -98,7 +98,7 @@ Endpoint for adding multiple video downloads at once. Accepts an array of downlo
 - `videoUrl`: Required. The URL of the video to download.
 - `fileName`: Optional. A custom filename for the downloaded file (max 250 characters, no extension).
 - `appendTitle`: Optional. Whether to append the webpage title to the filename. Default is `false`.
-- `quality`: Optional. The quality mode for the download (`best`, `worst`, or `audio`). Default is `"best"`.
+- `quality`: Optional. The quality mode for the download (`highest`, `lowest`, or `audio`). Default is `highest`.
 
 **Example Request:**
 
