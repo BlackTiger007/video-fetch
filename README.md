@@ -93,9 +93,9 @@ Endpoint for adding multiple video downloads at once. Accepts an array of downlo
 **Options:**
 
 - `videoUrl`: Required. The URL of the video to download.
-- `fileName`: Optional. A custom filename for the downloaded file (max 250 characters, no extension).
+- `fileName`: Optional. A custom filename for the downloaded file (max 200 characters, no extension).
 - `appendTitle`: Optional. Whether to append the webpage title to the filename. Default is `false`.
-- `quality`: Optional. The quality mode for the download (`highest`, `lowest`, or `audio`). Default is `highest`.
+- `quality`: Optional. The quality mode for the download (`highest`, `lowest`). Default is `highest`.
 
 **Example Request:**
 
