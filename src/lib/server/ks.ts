@@ -2,10 +2,10 @@ import type { DownloadQuality, YtDlpFormat } from '$lib/types/download';
 
 export function mapQualityToFormat(quality: DownloadQuality): YtDlpFormat {
 	switch (quality) {
-		case 'best':
+		case 'highest':
 			return { format: 'bestvideo*+bestaudio/best' };
 
-		case 'worst':
+		case 'lowest':
 			// KEIN -f → verhindert HLS-Crash
 			return { sort: '+res,+br,+size' };
 
