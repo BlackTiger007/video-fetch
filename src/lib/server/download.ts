@@ -1,160 +1,102 @@
-import { spawn, exec as execChild } from 'child_process';
+import { exec as execChild } from 'child_process';
 import path from 'path';
-import fs from 'fs';
 import { DOWNLOAD_FOLDER } from './config';
 import { mapQualityToFormat } from './ks';
 import { setStatus } from './db';
 import type { DownloadItem } from '$lib/types/download';
 import { downloads } from './store';
+import { ytdlp } from './ytdlp';
+import type { VideoProgress } from 'ytdlp-nodejs';
 
 export async function startDownload(item: DownloadItem, signal?: AbortSignal): Promise<void> {
-	const ytDlpPath = path.resolve('./bin/yt-dlp.exe');
-
-	let filename = item.fileName;
-	if (!filename || filename.trim() === '') filename = '%(title)s';
-	if (item.appendTitle && filename !== '%(title)s') filename += ' - %(title)s';
-
-	const output = path.join(DOWNLOAD_FOLDER, `${filename}.%(ext)s`);
+	const output = path.join(DOWNLOAD_FOLDER, `${item.fileName}.%(ext)s`);
 	const qualityArgs = mapQualityToFormat(item.quality);
+	const stderrBuffer: string[] = [];
 
 	await setStatus(item.id, 'downloading');
 
-	return new Promise<void>((resolve) => {
-		const args: string[] = [item.videoUrl];
-		if (qualityArgs.format) args.push('-f', qualityArgs.format);
-		if (qualityArgs.sort) args.push('-S', qualityArgs.sort);
-		args.push('-o', output, '--newline', '--no-playlist');
-
-		const proc = spawn(import.meta.env.DEV ? ytDlpPath : 'yt-dlp', args, {
-			stdio: ['ignore', 'pipe', 'pipe'],
-			windowsHide: true
-		});
-
-		const stderrBuffer: string[] = [];
-
-		// stdout: Fortschritt parsen (gleich wie vorher)
-		proc.stdout.on('data', (data) => {
-			const lines = data.toString().split('\n');
-			for (const line of lines) {
-				const regex =
-					/(\d+(?:\.\d+)?)%.*?at\s+([\d.]+[KMG]?i?B\/s).*?ETA\s+(\S+)(?:.*?\(frag\s+(\d+)\/(\d+)\))?/;
-				const match = line.match(regex);
-				if (!match) continue;
-				const [, progressStr, speedStr, etaStr, fragCur, fragTotal] = match;
-
-				downloads.update((items) =>
-					items.map((d) =>
-						d.id === item.id
-							? {
-									...d,
-									progress: parseFloat(progressStr),
-									speed: speedStr,
-									eta: etaStr,
-									fragment:
-										fragCur && fragTotal ? { current: +fragCur, total: +fragTotal } : undefined
-								}
-							: d
-					)
-				);
-			}
-		});
-
-		// stderr sammeln
-		proc.stderr.on('data', (data) => {
-			const msg = data.toString().trim();
-			if (msg) {
-				stderrBuffer.push(msg);
-				console.error('[yt-dlp]', msg);
-			}
-		});
-
-		// robustes Beenden des Child-Prozesses
-		const killProcess = () => {
-			try {
-				if (!proc.killed) {
-					if (process.platform === 'win32') {
-						// Windows: taskkill + Kindprozesse
-						try {
-							execChild(`taskkill /PID ${proc.pid} /T /F`, (err) => {
-								if (err) console.warn('taskkill failed:', err);
-							});
-						} catch (err) {
-							console.warn('taskkill exec failed:', err);
-						}
-					} else {
-						// Unix: SIGKILL
-						proc.kill('SIGKILL');
-					}
-				}
-			} catch (err) {
-				console.warn('Failed to kill child process on abort:', err);
-			}
-		};
-
-		// Benannte Abort-Listener-Funktion, damit removeEventListener funktioniert
-		const onAbort = () => {
-			// kill im nächsten Tick, um möglichen Sync-Problemen aus dem Weg zu gehen
-			setImmediate(killProcess);
-		};
-
-		// Falls das Signal schon abgebrochen ist -> kill und still resolve (Status wurde von caller gesetzt)
-		if (signal?.aborted) {
-			setImmediate(killProcess);
-			return resolve();
-		}
-
-		// Register Abort-Listener (einmalig)
-		if (signal) {
-			signal.addEventListener('abort', onAbort, { once: true });
-		}
-
-		// Prozess Ende
-		proc.on('close', async (code) => {
-			// Listener entfernen (falls noch vorhanden)
-			try {
-				signal?.removeEventListener('abort', onAbort);
-			} catch {
-				// ignorieren
-			}
-
-			// Wenn Signal abgebrochen wurde: Stille Beendigung (Status bereits in process.removeFromQueue gesetzt)
-			if (signal?.aborted) {
-				return resolve();
-			}
-
-			if (code === 0) {
-				// Erfolg: Datei suchen und Metadaten setzen
-				try {
-					const files = fs.readdirSync(DOWNLOAD_FOLDER);
-					const downloadedFile = files.find((f) => f.includes(filename.split(' - ')[0]));
-					if (downloadedFile) {
-						const stats = fs.statSync(path.join(DOWNLOAD_FOLDER, downloadedFile));
-						downloads.update((items) =>
-							items.map((d) =>
-								d.id === item.id
-									? {
-											...d,
-											fileName: downloadedFile,
-											size: `${(stats.size / 1024 / 1024).toFixed(2)} MB`
-										}
-									: d
-							)
-						);
-					}
-				} catch (err) {
-					console.warn('Error while reading download folder:', err);
-				}
-
-				await setStatus(item.id, 'finished');
-			} else {
-				// Fehlerfall: stderr oder Exit-Code als Nachricht
-				const errorMessage =
-					stderrBuffer.join('\n').slice(0, 1000) || `yt-dlp exited with code ${code}`;
-
-				await setStatus(item.id, 'error', errorMessage);
-			}
-
-			resolve();
-		});
+	const result = ytdlp.download(item.videoUrl, {
+		output: output,
+		formatSort: qualityArgs.sort ? [qualityArgs.sort] : undefined,
+		progress: true,
+		abortOnError: true
 	});
+
+	// stderr sammeln
+	result.stderr.on('data', (data) => {
+		const msg = data.toString().trim();
+		if (msg) {
+			stderrBuffer.push(msg);
+			console.error('[yt-dlp]', msg);
+		}
+	});
+
+	result.on('progress', (progress: VideoProgress) => {
+		downloads.update((items) =>
+			items.map((d) => (d.id === item.id ? { ...d, progress: progress } : d))
+		);
+
+		if (progress.status === 'finished') {
+			console.log('finished');
+		}
+	});
+
+	result.on('close', (code, closeSignal) => {
+		if (code === 0 && closeSignal === null) {
+			// Download war technisch erfolgreich
+			setStatus(item.id, 'finished');
+			console.log('close finished');
+		} else {
+			// Fehler beim Download
+			setStatus(item.id, 'error', stderrBuffer.filter((v) => v.startsWith('ERROR')).join('\n'));
+		}
+
+		// Listener entfernen (falls noch vorhanden)
+		try {
+			signal?.removeEventListener('abort', onAbort);
+		} catch {
+			// ignorieren
+		}
+	});
+
+	// robustes Beenden des Child-Prozesses
+	const killProcess = () => {
+		try {
+			if (!result.killed) {
+				if (process.platform === 'win32') {
+					// Windows: taskkill + Kindprozesse
+					try {
+						execChild(`taskkill /PID ${result.pid} /T /F`, (err) => {
+							if (err) console.warn('taskkill failed:', err);
+						});
+					} catch (err) {
+						console.warn('taskkill exec failed:', err);
+					}
+				} else {
+					// Unix: SIGKILL
+					result.kill('SIGKILL');
+				}
+			}
+		} catch (err) {
+			console.warn('Failed to kill child process on abort:', err);
+		}
+	};
+
+	const onAbort = () => {
+		// kill im nächsten Tick, um möglichen Sync-Problemen aus dem Weg zu gehen
+		setImmediate(killProcess);
+	};
+
+	// Falls das Signal schon abgebrochen ist -> kill und still resolve (Status wurde von caller gesetzt)
+	if (signal?.aborted) {
+		onAbort();
+		return;
+	}
+
+	// Register Abort-Listener (einmalig)
+	if (signal) {
+		signal.addEventListener('abort', onAbort, { once: true });
+	} else {
+		console.warn('Kein Abbruch signal');
+	}
 }
