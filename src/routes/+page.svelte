@@ -19,27 +19,42 @@
 	onMount(() => {
 		const evtSource = new EventSource('/api/downloads');
 
-		finishedDownloads.set(
-			data.download.filter((d) => d.status === 'finished' || d.status === 'error')
+		// Initiale fertige Downloads setzen
+		const initialFinished = data.download.filter((d) => ['finished', 'error'].includes(d.status));
+		finishedDownloads.set(initialFinished);
+
+		const initialActive = data.download.filter((d) =>
+			['downloading', 'pending', 'queued', 'paused'].includes(d.status)
 		);
+		activeDownloads.set(initialActive);
 
 		evtSource.onmessage = (event) => {
 			try {
 				const updates: DownloadUpdate[] = JSON.parse(event.data);
 
-				activeDownloads.set(
-					updates.filter((d) => ['downloading', 'pending', 'queued'].includes(d.status))
-				);
-
+				// Fertige Downloads (finished / error)
 				const finished = updates.filter((d) => ['finished', 'error'].includes(d.status));
 
-				const current = get(finishedDownloads);
+				// Aktuelle fertige Downloads
+				const currentFinished = get(finishedDownloads);
 
-				for (const d of finished) {
-					if (!current.find((c) => c.id === d.id)) {
-						finishedDownloads.update((f) => [...f, d]);
-					}
+				// Neue fertige Downloads hinzufügen
+				const newFinished = finished.filter((d) => !currentFinished.find((f) => f.id === d.id));
+				if (newFinished.length) {
+					finishedDownloads.update((f) => [...f, ...newFinished]);
 				}
+
+				// IDs der fertigen Downloads
+				const finishedIds = finished.map((d) => d.id);
+
+				// Aktive Downloads: nur die, die noch nicht fertig sind
+				activeDownloads.set(
+					updates.filter(
+						(d) =>
+							['downloading', 'pending', 'queued', 'paused'].includes(d.status) &&
+							!finishedIds.includes(d.id)
+					)
+				);
 			} catch (err) {
 				console.error('Invalid SSE data', err);
 			}
@@ -68,11 +83,13 @@
 	function formatInfo(d: DownloadUpdate) {
 		const parts: string[] = [];
 
-		parts.push(`${d.progress.toFixed(1)}%`);
-		if (d.size) parts.push(d.size);
-		if (d.speed) parts.push(d.speed);
-		if (d.eta) parts.push(`ETA ${d.eta}`);
-		if (d.fragment) parts.push(`Frag ${d.fragment.current}/${d.fragment.total}`);
+		if (!d.progress) return 'Keine Infos';
+
+		parts.push(d.progress.percentage_str);
+		parts.push(d.progress.total_str);
+		parts.push(d.progress.speed_str);
+		if (d.progress.eta) parts.push(`ETA ${d.progress.eta_str}`);
+		parts.push(d.progress.downloaded_str + '/' + d.progress.total_str);
 
 		return parts.join(' · ');
 	}
@@ -161,12 +178,14 @@
 							</div>
 						</div>
 
-						<div class="mt-2 h-2 w-full rounded bg-gray-300">
-							<div
-								class="h-2 rounded bg-primary transition-all"
-								style="width: {d.progress.toFixed(1)}%;"
-							></div>
-						</div>
+						{#if d.progress?.percentage}
+							<div class="mt-2 h-2 w-full rounded bg-gray-300">
+								<div
+									class="h-2 rounded bg-primary transition-all"
+									style="width: {d.progress.percentage.toFixed(1)}%;"
+								></div>
+							</div>
+						{/if}
 
 						<p class="mt-1 text-xs text-gray-500">
 							{formatInfo(d)}
