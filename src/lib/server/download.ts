@@ -35,17 +35,12 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 		downloads.update((items) =>
 			items.map((d) => (d.id === item.id ? { ...d, progress: progress } : d))
 		);
-
-		if (progress.status === 'finished') {
-			console.log('finished');
-		}
 	});
 
 	result.on('close', (code, closeSignal) => {
 		if (code === 0 && closeSignal === null) {
 			// Download war technisch erfolgreich
 			setStatus(item.id, 'finished');
-			console.log('close finished');
 		} else {
 			// Fehler beim Download
 			setStatus(item.id, 'error', stderrBuffer.filter((v) => v.startsWith('ERROR')).join('\n'));
