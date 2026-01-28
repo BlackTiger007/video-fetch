@@ -6,8 +6,6 @@ import { sanitizeFilename } from '$lib/server/utils';
 import type { DownloadAdd } from '$lib/server/db/schema';
 import type { DownloadQuality } from '$lib/types/download';
 import { ytdlp } from '$lib/server/ytdlp';
-import fs from 'fs/promises'; // Importieren des Promises-basierten fs-Moduls
-import path from 'path';
 
 const urlPattern = /^(https?:\/\/).+$/i;
 
@@ -33,13 +31,6 @@ export const actions: Actions = {
 			const videoInfos = await ytdlp.getInfoAsync(videoUrl);
 
 			console.log('playlist:', videoInfos._type === 'playlist');
-
-			// Informationen in eine Datei schreiben
-			await fs.writeFile(
-				path.join('D:\\Projects\\video-fetch', 'info.json'),
-				JSON.stringify(videoInfos, null, 2),
-				'utf8'
-			);
 
 			if (!fileName || fileName.trim() === '') fileName = videoInfos.title;
 			if (appendTitle && fileName !== videoInfos.title) fileName += ' - ' + videoInfos.title;
