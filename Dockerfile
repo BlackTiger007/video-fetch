@@ -24,11 +24,16 @@ RUN pnpm prune --production
 FROM node:24.12.0-slim
 WORKDIR /app
 
-# Runtime-Tools + yt-dlp
+# Runtime-Tools + yt-dlp + Deno
 RUN apt-get update && \
-    apt-get install -y ffmpeg curl && \
+    apt-get install -y ffmpeg curl unzip && \
+    # yt-dlp
     curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp
+    chmod a+rx /usr/local/bin/yt-dlp && \
+    # Deno
+    curl -fsSL https://deno.land/x/install/install.sh | sh && \
+    # Deno in PATH setzen
+    ln -s /root/.deno/bin/deno /usr/local/bin/deno
 
 # Build und node_modules kopieren
 COPY --from=builder /app/build build/
@@ -49,6 +54,7 @@ ENV PUBLIC_DEFAULT_CONCURRENCY=1
 ENV PUBLIC_MAX_CONCURRENCY=5
 ENV DOWNLOAD_PATH=/app/downloads
 ENV DATABASE_PATH=/app/data/downloads.db
+ENV PATH="$PATH:/root/.deno/bin" 
 
 # Port freigeben
 EXPOSE 3000
