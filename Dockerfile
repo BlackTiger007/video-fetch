@@ -35,7 +35,7 @@ RUN pnpm install --frozen-lockfile --prod=false --node-linker=hoisted
 ENV DATABASE_PATH=/data/downloads.db
 
 # Ordner für SQLite erstellen
-RUN mkdir -p data
+RUN mkdir -p /data
 
 # Drizzle Migrations kopieren
 COPY drizzle drizzle
@@ -59,7 +59,7 @@ COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/drizzle drizzle
 
 # Ordner für SQLite erstellen
-RUN mkdir -p data
+RUN mkdir -p /data
 
 # ALTES SQLITE DATA ENTFERNEN UND LEEREN
 RUN rm -rf data/*
