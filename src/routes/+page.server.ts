@@ -56,8 +56,8 @@ export const actions = {
 		const id = formData.get('id')?.toString() || null;
 
 		if (id?.length !== 36) {
-			console.log("error: 'Ungültige ID'");
-			return fail(400, { error: 'Ungültige ID' });
+			console.log("error: 'Invalid ID'");
+			return fail(400, { error: 'Invalid ID' });
 		}
 
 		await deleteDownload(id);
@@ -70,8 +70,8 @@ export const actions = {
 		const id = formData.get('id')?.toString() || null;
 
 		if (id?.length !== 36) {
-			console.log("error: 'Ungültige ID'");
-			return fail(400, { error: 'Ungültige ID' });
+			console.log("error: 'Invalid ID'");
+			return fail(400, { error: 'Invalid ID' });
 		}
 
 		try {
@@ -88,8 +88,8 @@ export const actions = {
 		const id = formData.get('id')?.toString() || null;
 
 		if (id?.length !== 36) {
-			console.log("error: 'Ungültige ID'", id?.length);
-			return fail(400, { error: 'Ungültige ID' });
+			console.log("error: 'Invalid ID'", id?.length);
+			return fail(400, { error: 'Invalid ID' });
 		}
 
 		setStatus(id, 'pending', null);
