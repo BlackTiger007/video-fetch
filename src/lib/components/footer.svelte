@@ -3,7 +3,7 @@
 </script>
 
 <footer class="footer-center footer bg-base-200 p-4 text-sm text-gray-500 sm:footer-horizontal">
-	<p>Dieses Tool wird „as is“ bereitgestellt. Nutzung auf eigene Verantwortung.</p>
+	<p>This tool is provided “as is”. Use at your own risk.</p>
 	<a
 		href="https://github.com/BlackTiger007/video-fetch"
 		class="btn btn-square hover:btn-accent"
