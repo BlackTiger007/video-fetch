@@ -71,7 +71,7 @@
 	function updateFromTextarea(value: string) {
 		importText = value;
 
-		// Datei bewusst verwerfen, sobald manuell editiert wird
+		// Clear file input when user edits manually
 		if (fileInput) fileInput.value = '';
 		importFile = null;
 
@@ -131,13 +131,13 @@
 			class={`tab ${active === 'single' ? 'tab-active' : ''}`}
 			onclick={() => (active = 'single')}
 		>
-			Einzeln hinzufügen
+			Add Single
 		</button>
 		<button
 			class={`tab ${active === 'batch' ? 'tab-active' : ''}`}
 			onclick={() => (active = 'batch')}
 		>
-			Batch importieren
+			Import Batch
 		</button>
 	</div>
 
@@ -169,24 +169,24 @@
 				</label> -->
 
 				<label class="flex flex-col">
-					<span class="font-medium">Optionaler Dateiname</span>
+					<span class="font-medium">Optional Filename</span>
 					<input
 						name="filename"
 						type="text"
 						class="input-bordered input w-full"
-						placeholder="Meine Datei (Episode 1)"
+						placeholder="My File (Episode 1)"
 					/>
 					<span class="text-sm text-gray-500">
-						Erlaubt: Buchstaben, Zahlen, Leerzeichen, (), [], -, _ (max. 200)
+						Allowed: letters, numbers, spaces, (), [], -, _ (max. 200)
 					</span>
 				</label>
 
 				<label class="flex items-center gap-3">
 					<input name="append_title" type="checkbox" class="checkbox" />
-					<span>Seitentitel an Dateinamen anhängen</span>
+					<span>Append page title to filename</span>
 				</label>
 
-				<button class="btn w-full btn-primary" type="submit">Hinzufügen</button>
+				<button class="btn w-full btn-primary" type="submit">Add</button>
 			</div>
 		</form>
 	{/if}
@@ -201,7 +201,7 @@
 		>
 			<div class="grid gap-4">
 				<div>
-					<label for="import_file" class="font-medium">Import-Datei (.txt, TSV)</label>
+					<label for="import_file" class="font-medium">Import File (.txt, TSV)</label>
 					<input
 						bind:this={fileInput}
 						type="file"
@@ -214,14 +214,14 @@
 				</div>
 
 				<div>
-					<label for="import_text" class="font-medium">Oder: TSV einfügen</label>
+					<label for="import_text" class="font-medium">Or paste TSV</label>
 					<textarea
 						name="import_text"
 						id="import_text"
 						rows={8}
 						bind:value={importText}
 						class="textarea-bordered textarea mt-2 w-full"
-						placeholder={`https://example.com/video1\tMein Video 1`}
+						placeholder={`https://example.com/video1\tMy Video 1`}
 						oninput={(e) => updateFromTextarea(e.currentTarget.value)}
 						onkeydown={handleTextareaKeydown}
 					></textarea>
@@ -234,17 +234,17 @@
 				{/if}
 
 				<div>
-					<p class="font-medium">Vorschau</p>
+					<p class="font-medium">Preview</p>
 					<div class="mt-2 max-h-56 overflow-auto rounded border p-2">
 						{#if $preview.length === 0}
-							<p class="text-sm text-gray-500">Keine gültigen Einträge.</p>
+							<p class="text-sm text-gray-500">No valid entries.</p>
 						{:else}
 							<table class="table w-full">
 								<thead>
 									<tr>
 										<th>#</th>
 										<th>URL</th>
-										<th>Dateiname</th>
+										<th>Filename</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -262,7 +262,7 @@
 				</div>
 
 				<button class="btn w-full btn-primary" type="submit" disabled={!!batchError}>
-					Importieren ({$preview.length})
+					Import ({$preview.length})
 				</button>
 			</div>
 		</form>
