@@ -157,13 +157,13 @@
 					/>
 				</label>
 
-				<label class="flex flex-col">
+				<!-- <label class="flex flex-col">
 					<span class="font-medium">Qualität</span>
 					<select name="quality" class="select-bordered select w-full">
 						<option value="highest">Beste Qualität</option>
 						<option value="lowest">Schlechteste Qualität</option>
 					</select>
-				</label>
+				</label> -->
 
 				<label class="flex flex-col">
 					<span class="font-medium">Optionaler Dateiname</span>
