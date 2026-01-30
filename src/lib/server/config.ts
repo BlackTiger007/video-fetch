@@ -10,7 +10,7 @@ export const DOWNLOAD_FOLDER = private_env.DOWNLOAD_PATH
 // Stelle sicher, dass der Ordner existiert
 if (!fs.existsSync(DOWNLOAD_FOLDER)) {
 	fs.mkdirSync(DOWNLOAD_FOLDER, { recursive: true });
-	console.log(`Download-Ordner erstellt: ${DOWNLOAD_FOLDER}`);
+	console.log(`Download folder created: ${DOWNLOAD_FOLDER}`);
 } else {
-	console.log(`Download-Ordner vorhanden: ${DOWNLOAD_FOLDER}`);
+	console.log(`Download folder exists: ${DOWNLOAD_FOLDER}`);
 }
