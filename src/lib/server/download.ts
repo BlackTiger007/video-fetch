@@ -14,17 +14,44 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 	await setStatus(item.id, 'downloading');
 
 	const result = ytdlp.download(item.videoUrl, {
-		output: output,
+		output,
 		progress: true,
 		abortOnError: true
-		// format: {
-		// 	filter: 'mergevideo',
-		// 	quality: item.quality ?? undefined
-		// }
 	});
 
-	// stderr sammeln
-	result.stderr.on('data', (data) => {
+	let finished = false;
+
+	/** Abort-Handler MUSS vor cleanup existieren */
+	const onAbort = () => {
+		if (finished) return;
+
+		setImmediate(() => {
+			try {
+				if (!result.killed) {
+					if (process.platform === 'win32') {
+						execChild(`taskkill /PID ${result.pid} /T /F`, () => {});
+					} else {
+						result.kill('SIGKILL');
+					}
+				}
+			} catch (err) {
+				console.warn('Failed to kill child process:', err);
+			}
+		});
+	};
+
+	const cleanup = () => {
+		try {
+			result.stderr?.removeAllListeners('data');
+			result.removeAllListeners('progress');
+			result.removeAllListeners('close');
+			signal?.removeEventListener('abort', onAbort);
+		} catch {
+			/* ignore */
+		}
+	};
+
+	result.stderr?.on('data', (data) => {
 		const msg = data.toString().trim();
 		if (msg) {
 			stderrBuffer.push(msg);
@@ -33,66 +60,35 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 	});
 
 	result.on('progress', (progress: VideoProgress) => {
-		downloads.update((items) =>
-			items.map((d) => (d.id === item.id ? { ...d, progress: progress } : d))
-		);
+		downloads.update((items) => items.map((d) => (d.id === item.id ? { ...d, progress } : d)));
 	});
 
-	result.on('close', (code, closeSignal) => {
-		if (code === 0 && closeSignal === null) {
-			// Download war technisch erfolgreich
-			setStatus(item.id, 'finished');
-		} else {
-			// Fehler beim Download
-			setStatus(item.id, 'error', stderrBuffer.filter((v) => v.startsWith('ERROR')).join('\n'));
-		}
+	return await new Promise<void>((resolve) => {
+		result.on('close', async (code, closeSignal) => {
+			if (finished) return;
+			finished = true;
 
-		// Listener entfernen (falls noch vorhanden)
-		try {
-			signal?.removeEventListener('abort', onAbort);
-		} catch {
-			// ignorieren
-		}
-	});
+			const ok = code === 0 && closeSignal === null;
+			const errorMsg = stderrBuffer.filter((v) => v.startsWith('ERROR')).join('\n') || undefined;
 
-	// robustes Beenden des Child-Prozesses
-	const killProcess = () => {
-		try {
-			if (!result.killed) {
-				if (process.platform === 'win32') {
-					// Windows: taskkill + Kindprozesse
-					try {
-						execChild(`taskkill /PID ${result.pid} /T /F`, (err) => {
-							if (err) console.warn('taskkill failed:', err);
-						});
-					} catch (err) {
-						console.warn('taskkill exec failed:', err);
-					}
-				} else {
-					// Unix: SIGKILL
-					result.kill('SIGKILL');
-				}
+			if (ok) {
+				await setStatus(item.id, 'finished');
+			} else {
+				await setStatus(item.id, 'error', errorMsg);
 			}
-		} catch (err) {
-			console.warn('Failed to kill child process on abort:', err);
+
+			cleanup();
+			resolve();
+		});
+
+		if (signal) {
+			if (signal.aborted) {
+				onAbort();
+				cleanup();
+				resolve();
+				return;
+			}
+			signal.addEventListener('abort', onAbort, { once: true });
 		}
-	};
-
-	const onAbort = () => {
-		// kill im nächsten Tick, um möglichen Sync-Problemen aus dem Weg zu gehen
-		setImmediate(killProcess);
-	};
-
-	// Falls das Signal schon abgebrochen ist -> kill und still resolve (Status wurde von caller gesetzt)
-	if (signal?.aborted) {
-		onAbort();
-		return;
-	}
-
-	// Register Abort-Listener (einmalig)
-	if (signal) {
-		signal.addEventListener('abort', onAbort, { once: true });
-	} else {
-		console.warn('Kein Abbruch signal');
-	}
+	});
 }
