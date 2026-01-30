@@ -3,13 +3,12 @@
 	import { maxConcurrency } from '$lib';
 	import Cancel from '$lib/assets/cancel.svelte';
 	import Copy from '$lib/assets/copy.svelte';
-	import Download from '$lib/assets/download.svelte';
 	import Retry from '$lib/assets/retry.svelte';
 	import Trash from '$lib/assets/trash.svelte';
 	import type { DownloadUpdate } from '$lib/types/download';
 	import type { PageProps } from './$types';
 	import { onMount } from 'svelte';
-	import { writable, get } from 'svelte/store';
+	import { writable } from 'svelte/store';
 
 	let { data }: PageProps = $props();
 
