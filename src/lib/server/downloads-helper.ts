@@ -21,6 +21,25 @@ export class ValidationError extends Error {
 }
 
 /**
+ * Hilfsfunktion: versuche aus der URL einen brauchbaren Fallback-Namen zu bauen.
+ * Beispiele: YouTube ?v=ID → ID, sonst letzter Pfadteil, sonst 'video'.
+ */
+function deriveNameFromUrl(videoUrl: string): string {
+	try {
+		const u = new URL(videoUrl);
+		// common youtube id param
+		const v = u.searchParams.get('v');
+		if (v) return v;
+		// last non-empty path segment
+		const parts = u.pathname.split('/').filter(Boolean);
+		if (parts.length > 0) return parts[parts.length - 1];
+	} catch {
+		// ignore
+	}
+	return 'video';
+}
+
+/**
  * Normalize input (single item or array), validate and expand playlists.
  * Returns an array of DownloadAdd ready to insert to DB.
  */
@@ -48,20 +67,39 @@ export async function prepareDownloadItems(
 		}
 
 		// Hole Metadaten (kann playlist oder video sein)
-		let info;
+		let info = null;
 		try {
 			info = await ytdlp.getInfoAsync(videoUrl);
 		} catch {
-			throw new ValidationError(400, `Fehler beim Abruf der Metadaten für URL: ${videoUrl}`);
+			// Nicht fatal — wenn Metadaten nicht verfügbar sind, behandeln wir den Eintrag
+			// als einzelnes Video ohne Titel/Playlist-Expansion.
+			info = { _type: 'video', title: null };
 		}
 
 		// Hilfsfunktion um Namen zu resolven und validieren
-		const buildName = (baseName: string | null, titleFromMeta?: string) => {
-			let name = baseName && baseName.trim() !== '' ? baseName : (titleFromMeta ?? '%(title)s');
-			if (appendTitle && titleFromMeta) {
-				// only append if baseName is different from title
-				if (name !== titleFromMeta) name = `${name} - ${titleFromMeta}`;
+		const buildName = (
+			baseName: string | null,
+			titleFromMeta?: string | null,
+			urlForFallback?: string
+		) => {
+			// Standardverhalten: wenn baseName nicht gesetzt → benutze titleFromMeta fallend,
+			// sonst Template '%(title)s' ersetzen durch Fallback (id/path) oder 'video'.
+			let name: string;
+			if (baseName && baseName.trim() !== '') {
+				name = baseName;
+			} else if (titleFromMeta && titleFromMeta.trim() !== '') {
+				name = titleFromMeta;
+			} else {
+				// kein baseName und kein titleFromMeta → benutze einen Fallback aus der URL
+				const fallback = urlForFallback ? deriveNameFromUrl(urlForFallback) : 'video';
+				name = fallback;
 			}
+
+			// Falls appendTitle gewünscht ist und es einen titleFromMeta gibt, anhängen
+			if (appendTitle && titleFromMeta && titleFromMeta.trim() !== '' && name !== titleFromMeta) {
+				name = `${name} - ${titleFromMeta}`;
+			}
+
 			name = sanitizeFilename(name);
 			if (name.length > MAX_FILENAME_LENGTH) {
 				throw new ValidationError(
@@ -72,17 +110,19 @@ export async function prepareDownloadItems(
 			return name;
 		};
 
-		if (info._type === 'playlist' && Array.isArray(info.entries)) {
+		if (info && info._type === 'playlist' && Array.isArray(info.entries)) {
 			// Expand playlist: jedes Video einzeln behandeln
 			for (const entry of info.entries) {
 				const entryUrl = entry.url || entry.webpage_url || entry.id;
-				const entryTitle = entry.title || 'untitled';
+				const entryTitle = entry.title ?? null;
 				if (!entryUrl) {
-					// weiter mit nächstem Eintrag, aber protokollieren wäre sinnvoll
+					// weiter mit nächstem Eintrag; fehlende URL kann vorkommen
 					continue;
 				}
-				// If user provided a filename for the playlist input, use it as base for each entry
-				const resolvedName = buildName(fileName, entryTitle);
+
+				// Wenn der Benutzer einen Dateinamen für das Playlist-Input angegeben hat,
+				// benutzen wir diesen als Basis, ansonsten nehmen wir entryTitle oder fallback.
+				const resolvedName = buildName(fileName ?? null, entryTitle, entryUrl);
 				result.push({
 					videoUrl: entryUrl,
 					fileName: resolvedName,
@@ -92,10 +132,13 @@ export async function prepareDownloadItems(
 				});
 			}
 		} else {
-			// Single video
-			const title = info.title ?? undefined;
+			// Single video (auch der Fall, wenn getInfoAsync fehlgeschlagen ist)
+			const title = info && 'title' in info ? (info.title ?? null) : null;
+
+			// Wenn kein fileName explizit angegeben wurde, versuchen wir title, sonst Fallback aus URL
 			if (!fileName || fileName.trim() === '') fileName = title ?? null;
-			const resolvedName = buildName(fileName, title);
+
+			const resolvedName = buildName(fileName, title, videoUrl);
 			result.push({
 				videoUrl,
 				fileName: resolvedName,
