@@ -15,10 +15,6 @@
 	const activeDownloads = writable<DownloadUpdate[]>([]);
 	const finishedDownloads = writable<DownloadUpdate[]>([]);
 
-	/* ------------------------------
-	   Helper: Konsistente Store-Logik
-	-------------------------------- */
-
 	function removeFromFinished(id: string) {
 		finishedDownloads.update((list) => list.filter((d) => d.id !== id));
 	}
@@ -28,14 +24,9 @@
 		finishedDownloads.update((list) => list.filter((d) => d.id !== id));
 	}
 
-	/* ------------------------------
-	   SSE Initialisierung
-	-------------------------------- */
-
 	onMount(() => {
 		const evtSource = new EventSource('/api/downloads');
 
-		// Initialzustand aus SSR
 		finishedDownloads.set(data.download.filter((d) => ['finished', 'error'].includes(d.status)));
 
 		activeDownloads.set(
@@ -46,7 +37,6 @@
 			try {
 				const updates: DownloadUpdate[] = JSON.parse(event.data);
 
-				// Fertige / fehlerhafte
 				const finished = updates.filter((d) => ['finished', 'error'].includes(d.status));
 
 				finishedDownloads.update((current) => {
@@ -57,7 +47,6 @@
 
 				const finishedIds = finished.map((d) => d.id);
 
-				// Aktive → niemals fertige enthalten
 				activeDownloads.set(
 					updates.filter(
 						(d) =>
@@ -73,29 +62,25 @@
 		return () => evtSource.close();
 	});
 
-	/* ------------------------------
-	   UI Helpers
-	-------------------------------- */
-
 	function statusLabel(status: string) {
 		switch (status) {
 			case 'downloading':
-				return 'Lädt herunter';
+				return 'Downloading';
 			case 'queued':
-				return 'In Warteschlange';
+				return 'Queued';
 			case 'pending':
-				return 'Wird vorbereitet';
+				return 'Preparing';
 			case 'finished':
-				return 'Fertig';
+				return 'Finished';
 			case 'error':
-				return 'Fehler';
+				return 'Error';
 			default:
 				return status;
 		}
 	}
 
 	function formatInfo(d: DownloadUpdate) {
-		if (!d.progress) return 'Keine Infos';
+		if (!d.progress) return 'No info';
 
 		const parts: string[] = [d.progress.percentage_str, d.progress.total_str, d.progress.speed_str];
 
@@ -109,18 +94,18 @@
 		if (!url) return;
 		try {
 			await navigator.clipboard.writeText(url);
-			alert('URL in die Zwischenablage kopiert!');
+			alert('URL copied to clipboard!');
 		} catch (err) {
-			console.error('Kopieren fehlgeschlagen', err);
+			console.error('Copy failed', err);
 		}
 	}
 </script>
 
 <div class="mx-auto w-full max-w-4xl space-y-4 px-4">
-	<!-- Einstellungen -->
+	<!-- Settings -->
 	<section class="space-y-3 rounded-lg bg-base-100 p-4 shadow">
 		<form method="POST" action="?/setConcurrency" use:enhance>
-			<span class="font-medium">Parallele Downloads</span>
+			<span class="font-medium">Parallel Downloads</span>
 			<input
 				type="range"
 				name="concurrency"
@@ -130,7 +115,7 @@
 				class="range range-primary"
 				onchange={(e) => e.currentTarget.form?.requestSubmit()}
 			/>
-			<p class="text-sm text-gray-500">Aktuell: {data.parallelDownloads}</p>
+			<p class="text-sm text-gray-500">Current: {data.parallelDownloads}</p>
 		</form>
 
 		<form method="POST" action="?/setPause" use:enhance>
@@ -141,9 +126,9 @@
 		</form>
 	</section>
 
-	<!-- Laufende Downloads -->
+	<!-- Active Downloads -->
 	<section class="rounded-lg bg-base-100 p-4 shadow">
-		<h2 class="mb-3 text-lg font-semibold">Laufende Downloads</h2>
+		<h2 class="mb-3 text-lg font-semibold">Active Downloads</h2>
 
 		{#if $activeDownloads.length}
 			<div class="space-y-3">
@@ -151,14 +136,14 @@
 					<div class="rounded-lg border bg-base-200 p-3">
 						<div class="flex justify-between gap-3">
 							<div class="min-w-0">
-								<p class="truncate font-medium">{d.fileName ?? 'Unbenannt'}</p>
+								<p class="truncate font-medium">{d.fileName ?? 'Unnamed'}</p>
 								<p class="text-xs text-gray-500">{statusLabel(d.status)}</p>
 							</div>
 
 							<div class="flex gap-1">
 								<button
 									class="btn btn-ghost btn-xs"
-									title="Link kopieren"
+									title="Copy link"
 									onclick={() => copyUrl(d.videoUrl)}
 								>
 									<Copy class="size-4" />
@@ -190,13 +175,13 @@
 				{/each}
 			</div>
 		{:else}
-			<p class="text-sm text-gray-500">Keine laufenden Downloads.</p>
+			<p class="text-sm text-gray-500">No active downloads.</p>
 		{/if}
 	</section>
 
-	<!-- Abgeschlossen -->
+	<!-- Finished Downloads -->
 	<section class="rounded-lg bg-base-100 p-4 shadow">
-		<h2 class="mb-3 text-lg font-semibold">Abgeschlossen</h2>
+		<h2 class="mb-3 text-lg font-semibold">Finished</h2>
 
 		{#if $finishedDownloads.length}
 			<div class="overflow-x-auto">
@@ -206,18 +191,18 @@
 							<th>Name</th>
 							<th>Status</th>
 							<th>Info</th>
-							<th class="text-right">Aktionen</th>
+							<th class="text-right">Actions</th>
 						</tr>
 					</thead>
 					<tbody>
 						{#each $finishedDownloads as d (d.id)}
 							<tr class={d.status === 'error' ? 'bg-error/10' : ''}>
-								<td class="max-w-xs truncate">{d.fileName ?? 'Unbenannt'}</td>
+								<td class="max-w-xs truncate">{d.fileName ?? 'Unnamed'}</td>
 								<td class={d.status === 'error' ? 'text-error' : 'text-success'}>
 									{statusLabel(d.status)}
 								</td>
 								<td class="text-xs text-gray-500">
-									{d.status === 'error' ? (d.errorMessage ?? 'Unbekannter Fehler') : '—'}
+									{d.status === 'error' ? (d.errorMessage ?? 'Unknown error') : '—'}
 								</td>
 								<td class="flex justify-end gap-1">
 									{#if d.status === 'error'}
@@ -234,7 +219,7 @@
 
 									<button
 										class="btn btn-ghost btn-xs"
-										title="Link kopieren"
+										title="Copy link"
 										onclick={() => copyUrl(d.videoUrl)}
 									>
 										<Copy class="size-4" />
@@ -256,7 +241,7 @@
 				</table>
 			</div>
 		{:else}
-			<p class="text-sm text-gray-500">Noch keine abgeschlossenen Downloads.</p>
+			<p class="text-sm text-gray-500">No finished downloads yet.</p>
 		{/if}
 	</section>
 </div>
