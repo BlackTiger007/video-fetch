@@ -31,8 +31,8 @@
 
 <div class="navbar bg-base-200 shadow-sm">
 	<div class="flex-1 gap-2">
-		<a href="/" class="btn text-xl font-bold hover:btn-accent">Video-Fetch</a>
-		<a href="/add" class="btn hover:btn-accent">Hinzufügen</a>
+		<a href="/" class="btn text-xl font-bold hover:btn-accent">Video Fetch</a>
+		<a href="/add" class="btn hover:btn-accent">Add</a>
 	</div>
 
 	<div class="flex-none">
