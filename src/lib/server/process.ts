@@ -55,7 +55,7 @@ export async function removeFromQueue(id: string) {
 
 	// UI/Store sofort aktualisieren — download.ts behandelt den ChildProcess-Kill,
 	// aber der sichtbare Status soll hier sofort 'abgebrochen' werden.
-	await setStatus(id, 'error', 'Vom Benutzer abgebrochen');
+	await setStatus(id, 'error', 'Cancelled by user');
 }
 
 export async function processDownloads() {
