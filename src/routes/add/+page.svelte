@@ -1,17 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { writable } from 'svelte/store';
+	import type { PageProps } from './$types';
+
+	let { form }: PageProps = $props();
 
 	// Tab state
-	let active: 'single' | 'batch' = 'single';
+	let active: 'single' | 'batch' = $state('single');
 
 	// Batch textarea/file preview
-	let importText = '';
-	let importFile: File | null = null;
-	let fileInput: HTMLInputElement | null = null;
+	let importText = $state('');
+	let importFile: File | null = $state(null);
+	let fileInput: HTMLInputElement | null = $state(null);
 
 	const preview = writable([] as { url: string; filename: string | null }[]);
-	let batchError: string | null = null;
+	let batchError: string | null = $state(null);
 
 	const MAX_FILENAME_LENGTH = 200;
 
@@ -263,5 +266,8 @@
 				</button>
 			</div>
 		</form>
+	{/if}
+	{#if form?.error}
+		<p class="w-full border border-error bg-error-content p-6 text-error">{form.error}</p>
 	{/if}
 </div>
