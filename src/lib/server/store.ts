@@ -18,7 +18,7 @@ export const downloads = writable<DownloadItem[]>([]);
 		.update(downloadsSchema)
 		.set({
 			status: 'error',
-			errorMessage: 'Download wurde durch einen Neustart oder Absturz beendet.'
+			errorMessage: 'The download was terminated due to a restart or crash.'
 		})
 		.where(inArray(downloadsSchema.status, ['downloading', 'queued', 'pending']));
 
