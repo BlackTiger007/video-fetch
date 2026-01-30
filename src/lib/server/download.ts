@@ -16,11 +16,11 @@ export async function startDownload(item: DownloadItem, signal?: AbortSignal): P
 	const result = ytdlp.download(item.videoUrl, {
 		output: output,
 		progress: true,
-		abortOnError: true,
-		format: {
-			filter: 'mergevideo',
-			quality: item.quality ?? undefined
-		}
+		abortOnError: true
+		// format: {
+		// 	filter: 'mergevideo',
+		// 	quality: item.quality ?? undefined
+		// }
 	});
 
 	// stderr sammeln
