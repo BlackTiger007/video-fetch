@@ -2,13 +2,13 @@
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/blacktiger001/videofetch.svg)](https://hub.docker.com/r/blacktiger001/videofetch)
 
-A simple web-based video download service powered by yt-dlp, featuring a SvelteKit frontend.
+A simple web-based video download service powered by yt-dlp and a SvelteKit frontend.
 
 ## Overview
 
 Video Fetcher provides a simple web UI for downloading videos from URLs with configurable quality options.
 
-### Features
+**Features:**
 
 - Add videos via URL and download them directly.
 - Supports multiple quality modes: `highest`, `lowest`.
@@ -20,18 +20,16 @@ Video Fetcher provides a simple web UI for downloading videos from URLs with con
 
 ### `DOWNLOAD_PATH`
 
-Directory where downloaded files are stored.  
-It is strongly recommended to mount this path as a Docker volume to ensure persistence:
+Directory where downloaded files are stored. It is strongly recommended to mount this path as a Docker volume to ensure persistence:
 
 ```yaml
 volumes:
-  - ./downloads:/app/downloads
+  - ./downloads:/downloads
 ```
 
 ### `DATABASE_PATH`
 
-Path where the database file is stored.
-It is strongly recommended to mount this path as a Docker volume to ensure data persistence:
+Path where the database file is stored. It is strongly recommended to mount this path as a Docker volume:
 
 ```yaml
 volumes:
@@ -40,7 +38,7 @@ volumes:
 
 ### `PUBLIC_DEFAULT_CONCURRENCY`
 
-Defines the default number of concurrent downloads.
+Default number of concurrent downloads.
 
 - Default: `1`
 - Example:
@@ -51,8 +49,7 @@ PUBLIC_DEFAULT_CONCURRENCY=2
 
 ### `PUBLIC_MAX_CONCURRENCY`
 
-Defines the maximum number of concurrent downloads selectable in the frontend UI (slider).
-This affects **only the UI**, not the underlying download engine.
+Maximum number of concurrent downloads selectable in the UI. Affects **only the frontend**, not the underlying download engine.
 
 - Default: `3`
 - Example:
@@ -63,41 +60,39 @@ PUBLIC_MAX_CONCURRENCY=5
 
 ## Usage
 
-1. Start the container using Docker or Docker Compose.
-2. Open the web interface.
-3. Add one or more video URLs.
-4. Select the desired quality and optional filename settings.
-5. Monitor progress and status directly in the UI.
+1. Start the container (Docker or Docker Compose).
+2. Open the web interface at `http://localhost:3000`.
+3. Add video URLs.
+4. Select quality and optional filename settings.
+5. Monitor progress in the UI.
 
-Downloaded files will be available in the configured `DOWNLOAD_PATH`.
+Downloaded files will be stored in the configured `DOWNLOAD_PATH`.
 
 ## API Endpoints
 
-### GET "/api/downloads"
+### GET `/api/downloads`
 
-Server-Sent Events (SSE) endpoint for real-time download updates. This is used on the main page to display active downloads.
-
-**Usage:**
+Server-Sent Events (SSE) endpoint for real-time updates on active downloads:
 
 ```javascript
 const eventSource = new EventSource('/api/downloads');
-eventSource.onmessage = function(event) {
-  console.log('New message:', event.data);
+eventSource.onmessage = function (event) {
+ console.log('New message:', event.data);
 };
 ```
 
-### POST "/api/add"
+### POST `/api/add`
 
-Endpoint for adding multiple video downloads at once. Accepts an array of download objects.
+Adds multiple video downloads at once. Expects an array of download objects.
 
-**Options:**
+**Fields:**
 
-- `videoUrl`: Required. The URL of the video to download.
-- `fileName`: Optional. A custom filename for the downloaded file (max 200 characters, no extension).
-- `appendTitle`: Optional. Whether to append the webpage title to the filename. Default is `false`.
-- `quality`: Optional. The quality mode for the download (`highest`, `lowest`). Default is `highest`.
+- `videoUrl` (required): Video URL.
+- `fileName` (optional): Custom filename (max 200 characters, without extension).
+- `appendTitle` (optional, default: false): Append webpage title to filename.
+- `quality` (optional, default: `highest`): Download quality (`highest` / `lowest`).
 
-**Example Request:**
+**Example:**
 
 ```sh
 curl -X POST http://localhost:3000/api/add \
@@ -114,16 +109,25 @@ curl -X POST http://localhost:3000/api/add \
 ]'
 ```
 
-## Running with Docker
+## Docker
 
-```cmd
+### Run directly
+
+```bash
 docker run -d \
+  --name videofetch \
   -p 3000:3000 \
-  -v /path/downloads:/app/downloads \
+  -v /absolute/path/to/downloads:/downloads \
+  -v /absolute/path/to/data/downloads.db:/data/downloads.db \
   blacktiger001/videofetch
 ```
 
-## Running with Docker Compose
+**Notes:**
+
+- Use absolute paths for both volumes.
+- Check logs: `docker logs videofetch`.
+
+### Docker Compose
 
 ```yaml
 services:
@@ -132,13 +136,26 @@ services:
     container_name: videofetch
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
-      - /path/downloads:/app/downloads
+      - ./downloads:/downloads
+      - ./data/downloads.db:/data/downloads.db
+```
+
+**Start:**
+
+```bash
+docker-compose up -d
+```
+
+**Check logs:**
+
+```bash
+docker-compose logs -f videofetch
 ```
 
 ## Notes
 
-- This project is experimental and not yet fully tested.
-- Unexpected behavior or errors may occur.
+- Project is experimental.
+- Unexpected behavior may occur.
 - Bug reports and issue submissions are welcome.
