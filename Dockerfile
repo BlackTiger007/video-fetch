@@ -52,6 +52,7 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y ffmpeg curl unzip && \
     ln -s $(which ffmpeg) /usr/local/bin/ffmpeg && \
+    ln -s $(which ffprobe) /usr/local/bin/ffprobe && \
     npm install -g pnpm && \
     mkdir -p /usr/local/bin && \
     # yt-dlp
